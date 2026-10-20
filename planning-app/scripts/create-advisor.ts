@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import bcrypt from 'bcryptjs';
+import { PASSWORD_LENGTH_MESSAGE, validPasswordLength } from '@/lib/auth/password-policy';
 
 dotenv.config({ path: '.env.local', quiet: true });
 
@@ -25,7 +26,7 @@ async function main() {
   const email = process.env.ADVISOR_EMAIL?.trim().toLowerCase() ?? '';
   if (!name || name.length > 200 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('ADVISOR_NAME and ADVISOR_EMAIL are required.');
   const password = await readSecret();
-  if (password.length < 12 || password.length > 200) throw new Error('A password of 12–200 characters is required.');
+  if (!validPasswordLength(password)) throw new Error(PASSWORD_LENGTH_MESSAGE);
   const { db } = await import('@/lib/db');
   try {
     const existing = await db.advisor.findUnique({ where: { email }, select: { id: true } });

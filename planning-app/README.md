@@ -8,7 +8,7 @@ Node 22, pnpm 10.18.0, Next.js 15, React 19, Prisma 6/MariaDB and shared Zod int
 
 ## Setup gates
 
-Provision a real authorized advisor using `ADVISOR_NAME`, `ADVISOR_EMAIL`, and protected `ADVISOR_PASSWORD` with `pnpm advisor:create`; never commit or print passwords. Assign the returned ID to `INTAKE_ADVISOR_ID`. Public submission fails closed until an actual advisor is assigned. Advisor’s first verified password login requires TOTP enrollment; no fake Preview account or public signup exists. Password must have 12–200 characters.
+Provision a real authorized advisor using `ADVISOR_NAME`, `ADVISOR_EMAIL`, and protected `ADVISOR_PASSWORD` with `pnpm advisor:create`; never commit or print passwords. Assign the returned ID to `INTAKE_ADVISOR_ID`. Public submission fails closed until an actual advisor is assigned. Advisor’s first verified password login requires TOTP enrollment; no fake Preview account or public signup exists. Password must have 8–200 characters, as Jesse requested. A unique 12+ character passphrase is recommended; verified authenticator MFA remains mandatory.
 
 Set `DATA_ENCRYPTION_KEY` to a securely backed-up random 32-byte hex key. Loss of this key makes encrypted draft/client/upload/outbox records unreadable. Use explicit HTTPS `APP_ORIGIN` for CSRF and resume/reset links. Default cookies use SameSite=None;Secure to work in HTTPS embedded development Preview; explicit COOKIE_LOCAL_HTTP=true applies only to loopback testing.
 

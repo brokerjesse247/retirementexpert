@@ -5,6 +5,7 @@ import { db } from '@/lib/db';
 import { tokenHash } from '@/lib/auth/crypto';
 import { ApiError, errorResponse, jsonBody, noStore, requireTrustedOrigin } from '@/lib/auth/http';
 import { enforceRateLimit } from '@/lib/auth/rate-limit';
+import { PASSWORD_LENGTH_MESSAGE, validPasswordLength } from '@/lib/auth/password-policy';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,7 +13,8 @@ export async function POST(request: NextRequest) {
     const body = await jsonBody(request);
     const token = typeof body.token === 'string' ? body.token : '';
     const password = typeof body.password === 'string' ? body.password : '';
-    if (!token || password.length < 12 || password.length > 200) throw new ApiError(400, 'Invalid or expired reset link.');
+    if (!token) throw new ApiError(400, 'Invalid or expired reset link.');
+    if (!validPasswordLength(password)) throw new ApiError(400, PASSWORD_LENGTH_MESSAGE);
     await enforceRateLimit('reset-token', token, 5, 15 * 60_000);
     const passwordHash = await bcrypt.hash(password, 12);
     await db.$transaction(async (tx: Prisma.TransactionClient) => {
