@@ -1,0 +1,16 @@
+Options -Indexes
+DirectoryIndex index.html
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^(?:\.git|\.github|scripts|dist)(?:/|$) - [F,L]
+  RewriteRule ^(?:README\.md|TODO\.md|app\.config\.ts|package(?:-lock)?\.json|\.env(?:\..*)?|plan\.md)$ - [F,L,NC]
+</IfModule>
+
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+  <FilesMatch "\.(css|js|svg)$">
+    Header set Cache-Control "public, max-age=300, must-revalidate"
+  </FilesMatch>
+</IfModule>
