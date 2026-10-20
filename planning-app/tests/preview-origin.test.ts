@@ -25,6 +25,10 @@ describe('Preview proxy origin compatibility',()=>{
   it('accepts rewritten origin only with all exact same-origin proxy metadata',()=>{
     expect(()=>requireTrustedOrigin(proxyRequest())).not.toThrow();
   });
+  it('does not confuse the proxy-derived HTTPS listen address with the browser origin',()=>{
+    const headers = proxyRequest().headers;
+    expect(()=>requireTrustedOrigin(new NextRequest('https://0.0.0.0:3000/api/auth/login',{headers}))).not.toThrow();
+  });
   it.each([
     {origin:'https://attacker.example.invalid'},
     {referer:'https://attacker.example.invalid/login'},

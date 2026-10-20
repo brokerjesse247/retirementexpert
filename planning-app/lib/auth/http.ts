@@ -91,10 +91,9 @@ export function requireTrustedOrigin(request: NextRequest): void {
       const loopback = internalUrl.protocol === 'http:' &&
         ['127.0.0.1', 'localhost', '[::1]'].includes(internalUrl.hostname) &&
         internalUrl.origin === internal;
-      const localListener = request.nextUrl.protocol === 'http:' &&
-        ['127.0.0.1', 'localhost', '[::1]'].includes(request.nextUrl.hostname) &&
-        request.nextUrl.port === internalUrl.port;
-      if (loopback && localListener &&
+      // Next.js derives nextUrl from forwarded scheme/listen host (e.g. https://0.0.0.0).
+      // That URL is not evidence of the original browser origin.
+      if (loopback &&
           request.headers.get('x-forwarded-host') === expected.host &&
           request.headers.get('x-forwarded-proto') === 'https' &&
           request.headers.get('sec-fetch-site') === 'same-origin' &&
