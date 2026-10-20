@@ -24,6 +24,16 @@ describe('Phase 1 intake schema', () => {
     }
   });
 
+  it('rejects an otherwise complete intake until consent is explicitly checked', () => {
+    const data = { ...completeIntake(), consent: false } as unknown as IntakeData;
+    const parsed = intakeSchema.safeParse(data);
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) expect(parsed.error.issues.some((issue) => issue.path.join('.') === 'consent')).toBe(true);
+    expect(validateStep(data, 8).consent).toContain('Consent');
+    data.consent = true;
+    expect(intakeSchema.safeParse(data).success).toBe(true);
+  });
+
   it('provides current-step required-field errors without surfacing other steps', () => {
     const errors = validateStep(structuredClone(emptyIntake) as IntakeData, 1);
     expect(errors.firstName).toContain('required');

@@ -2,8 +2,8 @@
 
 import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { IntakeSubmitControls } from './IntakeSubmitControls';
 import {
-  CONSENT_TEXT,
   emptyIntake,
   intakeSchema,
   IntakeData,
@@ -194,6 +194,7 @@ export function IntakeForm() {
   const [uploading, setUploading] = useState(false);
   const [resumeMessage, setResumeMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [submissionError, setSubmissionError] = useState('');
   const [ready, setReady] = useState(false);
 
   const dataRef = useRef(data);
@@ -473,6 +474,14 @@ export function IntakeForm() {
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (submitting) return;
+    setSubmissionError('');
+    if (stepRef.current !== 8) return;
+    if (dataRef.current.consent !== true) {
+      setErrors((current) => ({ ...current, consent: 'Consent is required to submit.' }));
+      setSubmissionError('Check the consent box if you agree before submitting. Your answers remain saved as a draft.');
+      document.getElementById('intake-consent')?.focus();
+      return;
+    }
     const allErrors: Record<string, string> = {};
     for (let number = 1; number <= 8; number += 1) Object.assign(allErrors, validateStep(dataRef.current, number));
     const finalParsed = intakeSchema.safeParse(dataRef.current);
@@ -481,7 +490,9 @@ export function IntakeForm() {
     }
     if (Object.keys(allErrors).length) {
       setErrors(allErrors);
-      setSaveMessage('Please correct the highlighted fields before submitting.');
+      const message = `Not submitted: ${Object.values(allErrors)[0]} Correct the highlighted fields, then return to Step 8 and submit.`;
+      setSubmissionError(message);
+      setSaveMessage(message);
       jumpToFirstInvalidStep(allErrors);
       return;
     }
@@ -502,7 +513,9 @@ export function IntakeForm() {
           jumpToFirstInvalidStep(fieldErrors);
         }
         setSaveState('error');
-        setSaveMessage(readableError(response, body));
+        const message = readableError(response, body);
+        setSubmissionError(message);
+        setSaveMessage(message);
         return;
       }
       const delivery = body && typeof body === 'object' && 'emailDelivery' in body ? (body as { emailDelivery?: unknown }).emailDelivery : undefined;
@@ -510,7 +523,9 @@ export function IntakeForm() {
       router.replace(emailDelivery ? `/intake/thank-you?emailDelivery=${emailDelivery}` : '/intake/thank-you');
     } catch (error) {
       setSaveState('error');
-      setSaveMessage(error instanceof Error ? error.message : 'We could not submit your intake. Your saved draft is still available; please retry.');
+      const message = error instanceof Error ? error.message : 'We could not submit your intake. Your saved draft is still available; please retry.';
+      setSubmissionError(message);
+      setSaveMessage(message);
     } finally {
       setSubmitting(false);
     }
@@ -577,9 +592,10 @@ export function IntakeForm() {
       </section>
 
       <section className="card intake-card">
+        {submissionError && step !== 8 ? <p className="error" role="alert">{submissionError}</p> : null}
         <div className="form-grid">
           <div>{step > 1 ? <button type="button" className="button" onClick={previousStep}>Back</button> : null}</div>
-          <div>{step < 8 ? <button type="button" className="button button-primary" onClick={nextStep}>Continue</button> : <button type="submit" className="button button-primary" disabled={submitting}>{submitting ? 'Submitting securely…' : 'Submit retirement intake'}</button>}</div>
+          <div>{step < 8 ? <button type="button" className="button button-primary" onClick={nextStep}>Continue</button> : <IntakeSubmitControls consent={Boolean(data.consent)} submitting={submitting} error={errors.consent} submissionError={submissionError} onConsentChange={(checked) => update('consent', checked)} />}</div>
         </div>
         <div className="notice">
           <strong>Development-preview resume links</strong>
@@ -726,7 +742,7 @@ function HealthStep({ data, errors, married, onChange, mutate }: { data: IntakeD
 function EstateReviewStep({ data, errors, onChange, onEdit }: { data: IntakeData; errors: Record<string, string>; onChange: (path: string, value: string | boolean) => void; onEdit: (step: number) => void }) {
   const documents: Array<[keyof IntakeData['estate'], string]> = [['will', 'Will'], ['livingTrust', 'Living trust'], ['financialPoa', 'Financial power of attorney'], ['healthcareDirective', 'Healthcare directive'], ['updatedBeneficiaries', 'Updated beneficiaries']];
   return <><section className="card"><h3>Estate documents</h3><div className="form-grid">{documents.map(([key, label]) => <div className="notice" key={key}><SelectControl data={data} errors={errors} path={`estate.${key}.status`} label={label} options={yesNoUnsureOptions} onChange={onChange} /><TextControl data={data} errors={errors} path={`estate.${key}.updatedYear`} label="Year last updated" type="number" inputMode="numeric" onChange={onChange} /></div>)}</div></section><section aria-labelledby="
-review-heading" className="card"><p className="eyebrow">Final review</p><h3 id="review-heading">Check every answer before you submit</h3><p className="muted">Use an Edit link to return to any step. Nothing is submitted until you select consent and choose Submit.</p><div className="form-grid"><ReviewSection step={1} title="About you" detail="Identity, household and employment" value={{ firstName: data.firstName, lastName: data.lastName, email: data.email, phone: data.phone, dob: data.dob, state: data.state, maritalStatus: data.maritalStatus, filingStatus: data.filingStatus, dependents: data.dependents, dependentsSpecialNeeds: data.dependentsSpecialNeeds, primaryEmployment: data.primary.employmentStatus, spouse: data.maritalStatus === 'MARRIED' ? { firstName: data.spouse.firstName, lastName: data.spouse.lastName, dob: data.spouse.dob, employmentStatus: data.spouse.employmentStatus } : 'Not applicable' }} onEdit={() => onEdit(1)} /><ReviewSection step={2} title="Income" detail="Income today and income expected in retirement" value={{ primary: pick(data.primary, ['earnedIncome', 'pensionMonthly', 'pensionStartAge', 'pensionSurvivorPercent', 'pensionCola', 'annuityMonthly', 'annuityStartAge', 'annuityTaxQualification', 'rentalOtherMonthly', 'rentalEndAge', 'partTimeIncome', 'partTimeEndAge']), spouse: data.maritalStatus === 'MARRIED' ? pick(data.spouse, ['earnedIncome', 'pensionMonthly', 'pensionStartAge', 'pensionSurvivorPercent', 'pensionCola', 'annuityMonthly', 'annuityStartAge', 'annuityTaxQualification', 'rentalOtherMonthly', 'rentalEndAge', 'partTimeIncome', 'partTimeEndAge']) : 'Not applicable' }} onEdit={() => onEdit(2)} /><ReviewSection step={3} title="Savings & investments" detail="Tax-type balances and household mix" value={{ primary: pick(data.primary, ['preTax401k', 'roth401k', 'traditionalIra', 'rothIra', 'hsaBalance', 'hsaEligibleForQualifiedExpenses', 'brokerage', 'brokerageCostBasis', 'cashSavingsCds', 'annuityCashValue', 'lifeInsuranceCashValue', 'employeeContributionPercent', 'employerMatchPercent', 'iraRothContribution']), spouse: data.maritalStatus === 'MARRIED' ? pick(data.spouse, ['preTax401k', 'roth401k', 'traditionalIra', 'rothIra', 'hsaBalance', 'hsaEligibleForQualifiedExpenses', 'brokerage', 'brokerageCostBasis', 'cashSavingsCds', 'annuityCashValue', 'lifeInsuranceCashValue', 'employeeContributionPercent', 'employerMatchPercent', 'iraRothContribution']) : 'Not applicable', allocation: data.allocation }} onEdit={() => onEdit(3)} /><ReviewSection step={4} title="Expenses, home & debts" detail="Spending, one-time goals, home and debt details" value={{ expenses: data.expenses, oneTimeGoals: data.oneTimeGoals, home: data.home, debts: data.debts }} onEdit={() => onEdit(4)} /><ReviewSection step={5} title="Social Security" detail="Benefit estimates, claims and optional statement" value={{ primary: pick(data.primary, ['pia', 'receivingSocialSecurity', 'socialSecurityMonthly', 'socialSecurityStartAge', 'claimAge', 'governmentPensionNonCovered']), spouse: data.maritalStatus === 'MARRIED' ? pick(data.spouse, ['pia', 'receivingSocialSecurity', 'socialSecurityMonthly', 'socialSecurityStartAge', 'claimAge', 'governmentPensionNonCovered']) : 'Not applicable', ssaStatement: data.ssaUploadId ? 'Private PDF attached' : 'No statement attached' }} onEdit={() => onEdit(5)} /><ReviewSection step={6} title="Retirement goals" detail="Retirement timing, lifestyle and priorities" value={{ primaryRetirementAge: data.primary.retirementAge, spouseRetirementAge: data.maritalStatus === 'MARRIED' ? data.spouse.retirementAge : 'Not applicable', lifestyle: data.lifestyle, rankedConcerns: data.rankedConcerns, legacyAmount: data.legacyAmount, annualCharity: data.annualCharity }} onEdit={() => onEdit(6)} /><ReviewSection step={7} title="Health, insurance & risk" detail="Planning inputs and risk responses" value={{ primary: pick(data.primary, ['healthStatus', 'lifeInsuranceType', 'lifeInsuranceDeathBenefit']), spouse: data.maritalStatus === 'MARRIED' ? pick(data.spouse, ['healthStatus', 'lifeInsuranceType', 'lifeInsuranceDeathBenefit']) : 'Not applicable', health: data.health, riskAnswers: data.riskAnswers }} onEdit={() => onEdit(7)} /><ReviewSection step={8} title="Estate documents" detail="Estate-document status and update years" value={data.estate} onEdit={() => onEdit(8)} /></div></section><section className="notice"><label><input type="checkbox" checked={data.consent} onChange={(event) => onChange('consent', event.target.checked)} /> {CONSENT_TEXT}</label>{errors.consent ? <p className="error">{errors.consent}</p> : null}</section><div className="field" aria-hidden="true" style={{ position: 'absolute', left: '-10000px', width: '1px', height: '1px', overflow: 'hidden' }}><label htmlFor="intake-website">Website</label><input id="intake-website" tabIndex={-1} autoComplete="off" value={data.website} onChange={(event) => onChange('website', event.target.value)} /></div></>;
+review-heading" className="card"><p className="eyebrow">Final review</p><h3 id="review-heading">Check every answer before you submit</h3><p className="muted">Use an Edit link to return to any step. Nothing is submitted until you select consent and choose Submit.</p><div className="form-grid"><ReviewSection step={1} title="About you" detail="Identity, household and employment" value={{ firstName: data.firstName, lastName: data.lastName, email: data.email, phone: data.phone, dob: data.dob, state: data.state, maritalStatus: data.maritalStatus, filingStatus: data.filingStatus, dependents: data.dependents, dependentsSpecialNeeds: data.dependentsSpecialNeeds, primaryEmployment: data.primary.employmentStatus, spouse: data.maritalStatus === 'MARRIED' ? { firstName: data.spouse.firstName, lastName: data.spouse.lastName, dob: data.spouse.dob, employmentStatus: data.spouse.employmentStatus } : 'Not applicable' }} onEdit={() => onEdit(1)} /><ReviewSection step={2} title="Income" detail="Income today and income expected in retirement" value={{ primary: pick(data.primary, ['earnedIncome', 'pensionMonthly', 'pensionStartAge', 'pensionSurvivorPercent', 'pensionCola', 'annuityMonthly', 'annuityStartAge', 'annuityTaxQualification', 'rentalOtherMonthly', 'rentalEndAge', 'partTimeIncome', 'partTimeEndAge']), spouse: data.maritalStatus === 'MARRIED' ? pick(data.spouse, ['earnedIncome', 'pensionMonthly', 'pensionStartAge', 'pensionSurvivorPercent', 'pensionCola', 'annuityMonthly', 'annuityStartAge', 'annuityTaxQualification', 'rentalOtherMonthly', 'rentalEndAge', 'partTimeIncome', 'partTimeEndAge']) : 'Not applicable' }} onEdit={() => onEdit(2)} /><ReviewSection step={3} title="Savings & investments" detail="Tax-type balances and household mix" value={{ primary: pick(data.primary, ['preTax401k', 'roth401k', 'traditionalIra', 'rothIra', 'hsaBalance', 'hsaEligibleForQualifiedExpenses', 'brokerage', 'brokerageCostBasis', 'cashSavingsCds', 'annuityCashValue', 'lifeInsuranceCashValue', 'employeeContributionPercent', 'employerMatchPercent', 'iraRothContribution']), spouse: data.maritalStatus === 'MARRIED' ? pick(data.spouse, ['preTax401k', 'roth401k', 'traditionalIra', 'rothIra', 'hsaBalance', 'hsaEligibleForQualifiedExpenses', 'brokerage', 'brokerageCostBasis', 'cashSavingsCds', 'annuityCashValue', 'lifeInsuranceCashValue', 'employeeContributionPercent', 'employerMatchPercent', 'iraRothContribution']) : 'Not applicable', allocation: data.allocation }} onEdit={() => onEdit(3)} /><ReviewSection step={4} title="Expenses, home & debts" detail="Spending, one-time goals, home and debt details" value={{ expenses: data.expenses, oneTimeGoals: data.oneTimeGoals, home: data.home, debts: data.debts }} onEdit={() => onEdit(4)} /><ReviewSection step={5} title="Social Security" detail="Benefit estimates, claims and optional statement" value={{ primary: pick(data.primary, ['pia', 'receivingSocialSecurity', 'socialSecurityMonthly', 'socialSecurityStartAge', 'claimAge', 'governmentPensionNonCovered']), spouse: data.maritalStatus === 'MARRIED' ? pick(data.spouse, ['pia', 'receivingSocialSecurity', 'socialSecurityMonthly', 'socialSecurityStartAge', 'claimAge', 'governmentPensionNonCovered']) : 'Not applicable', ssaStatement: data.ssaUploadId ? 'Private PDF attached' : 'No statement attached' }} onEdit={() => onEdit(5)} /><ReviewSection step={6} title="Retirement goals" detail="Retirement timing, lifestyle and priorities" value={{ primaryRetirementAge: data.primary.retirementAge, spouseRetirementAge: data.maritalStatus === 'MARRIED' ? data.spouse.retirementAge : 'Not applicable', lifestyle: data.lifestyle, rankedConcerns: data.rankedConcerns, legacyAmount: data.legacyAmount, annualCharity: data.annualCharity }} onEdit={() => onEdit(6)} /><ReviewSection step={7} title="Health, insurance & risk" detail="Planning inputs and risk responses" value={{ primary: pick(data.primary, ['healthStatus', 'lifeInsuranceType', 'lifeInsuranceDeathBenefit']), spouse: data.maritalStatus === 'MARRIED' ? pick(data.spouse, ['healthStatus', 'lifeInsuranceType', 'lifeInsuranceDeathBenefit']) : 'Not applicable', health: data.health, riskAnswers: data.riskAnswers }} onEdit={() => onEdit(7)} /><ReviewSection step={8} title="Estate documents" detail="Estate-document status and update years" value={data.estate} onEdit={() => onEdit(8)} /></div></section><div className="field" aria-hidden="true" style={{ position: 'absolute', left: '-10000px', width: '1px', height: '1px', overflow: 'hidden' }}><label htmlFor="intake-website">Website</label><input id="intake-website" tabIndex={-1} autoComplete="off" value={data.website} onChange={(event) => onChange('website', event.target.value)} /></div></>;
 }
 
 function pick(source: Record<string, unknown>, keys: string[]) {

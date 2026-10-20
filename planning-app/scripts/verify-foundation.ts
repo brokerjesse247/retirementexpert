@@ -46,6 +46,11 @@ async function main(){
    d=await json(await draft.PATCH(request('/api/intake/draft','PATCH',{data:full,step:8,revision:d.revision,csrfToken:d.csrfToken},dc)));
    const draftRow=await db.intakeDraft.findUniqueOrThrow({where:{sessionTokenHash:tokenHash(dc.split('=')[1])}});
    const grantToken=randomToken();await db.draftAccessGrant.create({data:{draftId:draftRow.id,tokenHash:tokenHash(grantToken),expiresAt:new Date(Date.now()+60000)}});
+   const noConsent=await json(await submit.POST(request('/api/intake/submit','POST',{data:{...full,consent:false},revision:d.revision,csrfToken:d.csrfToken},dc)),422);
+   assert.ok(noConsent.fields.consent);
+   assert.equal(await db.client.count({where:{advisorId:advisor.id}}),0);
+   assert.equal((await db.intakeDraft.findUniqueOrThrow({where:{id:draftRow.id}})).submittedAt,null);
+   record('Unchecked consent cannot submit or create a dashboard client');
    const submitted=await json(await submit.POST(request('/api/intake/submit','POST',{data:full,revision:d.revision,csrfToken:d.csrfToken},dc)));
    assert.equal(submitted.emailDelivery,'queued');
    const twice=await json(await submit.POST(request('/api/intake/submit','POST',{data:full,revision:d.revision,csrfToken:d.csrfToken},dc)));
