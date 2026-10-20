@@ -74,11 +74,36 @@ export function appOrigin(): string {
   return configuredOrigin().origin;
 }
 
-/** Mutating routes accept only browser requests from the explicitly configured public origin. */
+/** Mutating routes accept the configured origin; Preview rewrites that origin to loopback. */
 export function requireTrustedOrigin(request: NextRequest): void {
-  const expected = configuredOrigin().origin;
+  const expected = configuredOrigin();
   const actual = request.headers.get('origin');
-  if (!actual || actual !== expected) throw new ApiError(403, 'Request origin is not allowed.');
+  if (actual === expected.origin) return;
+
+  // Opt-in development transport compatibility, never authentication bypass.
+  // No wildcard origins, no arbitrary forwarded-origin trust, no production fallback.
+  const internal = process.env.PREVIEW_PROXY_INTERNAL_ORIGIN;
+  if (process.env.NODE_ENV !== 'production' && internal && actual === internal &&
+      expected.protocol === 'https:' && expected.hostname.endsWith('.manus.computer')) {
+    try {
+      const internalUrl = new URL(internal);
+      const referrer = new URL(request.headers.get('referer') ?? '');
+      const loopback = internalUrl.protocol === 'http:' &&
+        ['127.0.0.1', 'localhost', '[::1]'].includes(internalUrl.hostname) &&
+        internalUrl.origin === internal;
+      const localListener = request.nextUrl.protocol === 'http:' &&
+        ['127.0.0.1', 'localhost', '[::1]'].includes(request.nextUrl.hostname) &&
+        request.nextUrl.port === internalUrl.port;
+      if (loopback && localListener &&
+          request.headers.get('x-forwarded-host') === expected.host &&
+          request.headers.get('x-forwarded-proto') === 'https' &&
+          request.headers.get('sec-fetch-site') === 'same-origin' &&
+          referrer.origin === expected.origin) return;
+    } catch {
+      // Missing or malformed metadata fails closed.
+    }
+  }
+  throw new ApiError(403, 'Request origin is not allowed.');
 }
 
 export function requireCsrf(expected: string, supplied: unknown): void {
