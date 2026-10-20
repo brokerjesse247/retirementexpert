@@ -34,7 +34,7 @@ export function ResetPasswordForm() {
   }
   return <AuthShell eyebrow="Account recovery" title="Choose a new password">
     {complete ? <><p className="notice">Your password has been updated. For your security, previous sessions have been signed out.</p><Link className="button button-primary" href="/login">Sign in</Link></> : !token ? <><p className="error">This reset link is missing, invalid, or expired.</p><Link className="button button-secondary" href="/forgot-password">Request a new link</Link></> : <form onSubmit={submit} noValidate>
-      <p className="muted">{PASSWORD_LENGTH_MESSAGE} Authenticator verification remains required.</p>
+      <p className="muted">{PASSWORD_LENGTH_MESSAGE}</p>
       <label className="field"><span>New password</span><input className="input" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={PASSWORD_MIN_LENGTH} maxLength={PASSWORD_MAX_LENGTH} required /></label>
       <label className="field"><span>Confirm new password</span><input className="input" type="password" autoComplete="new-password" value={confirmation} onChange={(e) => setConfirmation(e.target.value)} minLength={PASSWORD_MIN_LENGTH} maxLength={PASSWORD_MAX_LENGTH} required /></label>
       {error && <p className="error" role="alert">{error}</p>}

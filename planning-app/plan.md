@@ -40,7 +40,7 @@ Use **Next.js and TypeScript** for application screens and server routes, **Pris
 
 Hostinger documents Node.js/Next.js hosting on Business Web Hosting and Cloud plans [1], and MariaDB for its Web/Cloud databases [2]. These are general platform capabilities, not proof that the specific account has already been configured. PostgreSQL is recommended, not mandatory, in the upload; MariaDB avoids introducing a separate database hosting service solely to follow that example. Verify the account’s actual application limits, database access, TLS, encryption and backup behavior before storing real client data.
 
-Use explicitly requested **email/password advisor authentication**, hashed passwords, TOTP two-factor authentication, hashed recovery codes, password-reset tokens, server-side sessions, rate limiting and a 30-minute idle timeout. Advisor access is invitation/bootstrap-controlled; a public signup must never create an advisor. Use HTTPS-only production cookies, CSRF protection and ownership checks on every client, scenario, report and settings operation. No development login bypass.
+**Revised by Jesse October 20, 2026 at 11:07:** use **email/password advisor authentication only**, minimum 8 characters, with hashed passwords, password-reset tokens, server-side sessions, rate limiting and a 30-minute idle timeout. Remove TOTP/QR/recovery-code setup and verification, disable obsolete endpoints, and invalidate existing setup secrets/challenges. Password-only login is less secure; recommend a unique 12+ character passphrase without changing the approved minimum. Advisor access remains invitation/bootstrap-controlled; a public signup must never create an advisor. Use HTTPS-only production cookies, CSRF protection and ownership checks on every client, scenario, report and settings operation. No development login bypass.
 
 Use transactional email for advisor alerts, client confirmations, draft-resume links and password resets. Prefer the already authorized LSRT Hostinger Mail integration if its documented send contract and mailbox restrictions cover the requested delivery. Verify the mailbox’s sender identity and Jesse’s recipient address during setup. Credentials remain server-side and never enter Git or browser code. If sending is unavailable, show an explicit pending/failed state rather than reporting a sent message.
 
@@ -52,9 +52,9 @@ No hosting upgrade, new paid service, domain purchase, production cutover, or re
 
 The existing homepage remains in its current static deployment. The `platform` branch holds the full application with these responsibilities:
 
-- `app/`: public landing/intake/confirmation/privacy routes, login/reset/2FA screens, dashboard, client workspace and settings routes.
+- `app/`: public landing/intake/confirmation/privacy routes, password-only login/reset screens, dashboard, client workspace and settings routes.
 - `components/`: reusable brand controls, accessible form fields, progress/navigation, workspace tabs and SVG charts.
-- `lib/auth/`: session verification, advisor authorization, password and TOTP flows.
+- `lib/auth/`: session verification, advisor authorization, password verification/reset and retained security controls.
 - `lib/intake/`: the shared eight-step field contract, validation, secure draft access and normalization.
 - `lib/calculations/`: pure, network-free functions for all Section 8 modules; reproducible Monte Carlo seed and explicit engine version.
 - `lib/assumptions/`: verified yearly tables, source metadata, versioning and scenario resolution.
@@ -95,7 +95,7 @@ The recommendation layer remains educational and advisor-controlled. Insurance/a
 
 ### Phase 1 — Foundation
 
-Deliver the blue-branded planning application, protected advisor login/2FA/reset/session controls, relational database, all eight intake steps from Section 5, conditional spouse fields, shared validation, visible autosave, secure save-and-resume, review/consent/submit/thank-you flow, transactional email status, dashboard KPIs/client search/status filters, and editable client profiles. Include privacy notice and private optional SSA upload handling. The foundation must save a submitted intake that Jesse can actually open and edit. Financial analysis and reports remain clearly unavailable until their phases are delivered.
+Deliver the blue-branded planning application, protected password-only advisor login/reset/session controls per Jesse’s latest revision, relational database, all eight intake steps from Section 5, conditional spouse fields, shared validation, visible autosave, secure save-and-resume, review/consent/submit/thank-you flow, transactional email status, dashboard KPIs/client search/status filters, and editable client profiles. Include privacy notice and private optional SSA upload handling. The foundation must save a submitted intake that Jesse can actually open and edit. Financial analysis and reports remain clearly unavailable until their phases are delivered.
 
 ### Phase 2 — Calculation engine
 

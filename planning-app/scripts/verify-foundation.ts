@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import * as OTPAuth from 'otpauth';
 
 dotenv.config({path:'.env.test',override:true,quiet:true});
 const source=process.env.DATABASE_URL??'';
@@ -27,7 +26,7 @@ async function main(){
  const {decryptJson,decryptText,tokenHash,randomToken}=await import('../lib/auth/crypto');
  const tag=crypto.randomBytes(6).toString('hex');
  const email=`fixture-${tag}@example.invalid`;
- const password=crypto.randomBytes(24).toString('hex');
+ const password=crypto.randomBytes(4).toString('hex');
  const advisor=await db.advisor.create({data:{name:'ISOLATED TEST FIXTURE',email,passwordHash:await bcrypt.hash(password,12)}});
  process.env.INTAKE_ADVISOR_ID=advisor.id;
  try{
@@ -59,12 +58,13 @@ async function main(){
    const exchange=await import('../app/api/intake/resume/exchange/route');
    await json(await exchange.POST(request('/api/intake/resume/exchange','POST',{token:grantToken})),400);record('Pre-submission resume grant cannot reopen a submitted profile');
    await json(await login.POST(request('/api/auth/login','POST',{email,password:'wrong'})),401);
-   const challenged=await login.POST(request('/api/auth/login','POST',{email,password}));let ac=cookies(challenged);const challenge=await json(challenged);assert.equal(challenge.enrollmentRequired,true);
-   await json(await listing.GET(request('/api/clients','GET',undefined,ac)),401);record('Password challenge alone cannot access client data');
-   const enrollment=await json(await enroll.GET(request('/api/auth/enroll','GET',undefined,ac)));
-   const otp=new OTPAuth.TOTP({issuer:'RetirementExpert',label:email,algorithm:'SHA1',digits:6,period:30,secret:OTPAuth.Secret.fromBase32(enrollment.secret)}).generate();
-   const verified=await enroll.POST(request('/api/auth/enroll','POST',{code:otp,csrfToken:enrollment.csrfToken},ac));ac=cookies(verified);const verifiedBody=await json(verified);assert.ok(verifiedBody.recoveryCodes.length>0);
-   const me=await json(await session.GET(request('/api/auth/session','GET',undefined,ac)));assert.equal(me.advisor.id,advisor.id);record('Real password → TOTP enrollment → advisor session works');
+   const signedIn=await login.POST(request('/api/auth/login','POST',{email,password}));const ac=cookies(signedIn);const signIn=await json(signedIn);assert.equal(signIn.authMode,'PASSWORD');assert.equal(signIn.requiresTwoFactor,undefined);
+   assert.match(signedIn.headers.get('set-cookie')??'',/Secure/);assert.match(signedIn.headers.get('set-cookie')??'',/SameSite=none/i);
+   const verify=await import('../app/api/auth/verify/route');
+   await json(await enroll.GET(request('/api/auth/enroll','GET',undefined,ac)),410);
+   await json(await enroll.POST(request('/api/auth/enroll','POST',{},ac)),410);
+   await json(await verify.POST(request('/api/auth/verify','POST',{},ac)),410);record('Obsolete authenticator enrollment and code endpoints cannot issue sessions');
+   const me=await json(await session.GET(request('/api/auth/session','GET',undefined,ac)));assert.equal(me.advisor.id,advisor.id);assert.equal(me.twoFactorEnabled,false);record('Real eight-character password directly creates a verified advisor session');
    const list=await json(await listing.GET(request('/api/clients?sort=name_asc','GET',undefined,ac)));assert.equal(list.clients.length,1);assert.ok(list.clients[0].age>=60);
    const id=client.id;const context={params:Promise.resolve({id})};
    const profile=await json(await detail.GET(request('/api/clients/'+id,'GET',undefined,ac),context));
@@ -78,12 +78,12 @@ async function main(){
    const activity=await import('../app/api/auth/activity/route');
    await json(await activity.POST(request('/api/auth/activity','POST',{csrfToken:me.csrfToken},ac,'true' as any)));
    await json(await activity.POST(request('/api/auth/activity','POST',{csrfToken:me.csrfToken},ac,false)),403);record('Only trusted CSRF-protected activity can renew the advisor session');
-   const staleChallenge=await login.POST(request('/api/auth/login','POST',{email,password}));const oldChallengeCookie=cookies(staleChallenge);await json(staleChallenge);
+   const otherLogin=await login.POST(request('/api/auth/login','POST',{email,password}));const otherCookie=cookies(otherLogin);await json(otherLogin);
    const resetToken=randomToken();await db.passwordResetToken.create({data:{advisorId:advisor.id,tokenHash:tokenHash(resetToken),expiresAt:new Date(Date.now()+60000)}});
    const reset=await import('../app/api/auth/reset/route');
    await json(await reset.POST(request('/api/auth/reset','POST',{token:resetToken,password:crypto.randomBytes(24).toString('hex')})));
    await json(await listing.GET(request('/api/clients','GET',undefined,ac)),401);
-   const verify=await import('../app/api/auth/verify/route');await json(await verify.POST(request('/api/auth/verify','POST',{code:otp,csrfToken:challenge.csrfToken},oldChallengeCookie)),401);record('Password reset revokes both sessions and pre-reset challenges');
+   await json(await listing.GET(request('/api/clients','GET',undefined,otherCookie)),401);record('Password reset revokes all previously created sessions');
    assert.equal(await db.emailOutbox.count({where:{status:'SENT'}}),0);record('Test provider sends remain disabled; no false delivery claims');
  }finally{
    await db.intakeDraft.deleteMany({where:{client:{advisorId:advisor.id}}});

@@ -8,7 +8,8 @@ export async function GET(request: NextRequest) {
     const response = NextResponse.json({
       advisor: session ? { id: session.advisor.id, name: session.advisor.name, email: session.advisor.email } : null,
       csrfToken: session?.csrfToken ?? null,
-      twoFactorEnabled: Boolean(session?.advisor.totpEnabledAt),
+      authMode: 'PASSWORD',
+      twoFactorEnabled: false,
     });
     if (session) setSessionCookie(response, request, 'rp_advisor_session', request.cookies.get('rp_advisor_session')!.value);
     return noStore(response);

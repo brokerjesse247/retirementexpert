@@ -6,7 +6,7 @@ import { requireAdvisor } from '@/lib/auth/session';
 export async function GET(request: NextRequest) {
   try {
     const session = await requireAdvisor(request);
-    const response = NextResponse.json({ advisor: { name: session.advisor.name, email: session.advisor.email, phone: session.advisor.phone, licenseNumbers: session.advisor.licenseNumbers }, csrfToken: session.csrfToken, twoFactorEnabled: Boolean(session.advisor.totpEnabledAt) });
+    const response = NextResponse.json({ advisor: { name: session.advisor.name, email: session.advisor.email, phone: session.advisor.phone, licenseNumbers: session.advisor.licenseNumbers }, csrfToken: session.csrfToken, authMode: 'PASSWORD', twoFactorEnabled: false });
     setSessionCookie(response, request, 'rp_advisor_session', request.cookies.get('rp_advisor_session')!.value);
     return noStore(response);
   } catch (error) { return errorResponse(error); }
