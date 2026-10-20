@@ -4,8 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { IntakeSubmitControls } from '../components/intake/IntakeSubmitControls';
 import { CONSENT_TEXT } from '../lib/intake/schema';
 
-function render(consent: boolean, submitting = false) {
-  return renderToStaticMarkup(<IntakeSubmitControls consent={consent} submitting={submitting} onConsentChange={() => {}} />);
+function render(consent: boolean, submitting = false, blocked = false) {
+  return renderToStaticMarkup(<IntakeSubmitControls consent={consent} submitting={submitting} blocked={blocked} onConsentChange={() => {}} />);
 }
 function submitTag(html: string) {
   return html.match(/<button[^>]*type="submit"[^>]*>/)?.[0] ?? '';
@@ -27,5 +27,10 @@ describe('visible intake consent submission gate', () => {
   it('locks submission again while a request is pending or consent is unchecked', () => {
     expect(submitTag(render(true, true))).toContain('disabled');
     expect(submitTag(render(false))).toContain('disabled');
+  });
+  it('keeps submission locked for other missing or invalid questions after consent', () => {
+    const html = render(true, false, true);
+    expect(submitTag(html)).toContain('disabled');
+    expect(html).toContain('Correct the highlighted questions');
   });
 });

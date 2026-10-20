@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { emptyIntake, type IntakeData } from '@/lib/intake/schema';
+import { safeDraftStep } from '@/lib/intake/navigation';
 import { decryptJson, encryptJson, randomToken, tokenHash } from '@/lib/auth/crypto';
 import { ApiError } from '@/lib/auth/http';
 import { getDraftSessionToken } from '@/lib/auth/session';
@@ -22,5 +23,6 @@ export async function requireDraft(request: NextRequest): Promise<DraftContext> 
 }
 
 export function draftResponse(context: { draft: { step: number; revision: number; submittedAt: Date | null; csrfToken: string }; data: IntakeData }) {
-  return { data: context.data, step: context.draft.step, revision: context.draft.revision, submitted: Boolean(context.draft.submittedAt), csrfToken: context.draft.csrfToken };
+  const step = context.draft.submittedAt ? context.draft.step : safeDraftStep(context.data, context.draft.step);
+  return { data: context.data, step, revision: context.draft.revision, submitted: Boolean(context.draft.submittedAt), csrfToken: context.draft.csrfToken };
 }

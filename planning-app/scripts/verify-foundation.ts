@@ -37,6 +37,11 @@ async function main(){
    const partial=structuredClone(emptyIntake);partial.firstName='T';partial.email='unfinished@';
    d=await json(await draft.PATCH(request('/api/intake/draft','PATCH',{data:partial,step:1,revision:d.revision,csrfToken:d.csrfToken},dc)));
    assert.equal(d.data.firstName,'T');record('Partial invalid-email draft autosaves without requiring step completion');
+   d=await json(await draft.PATCH(request('/api/intake/draft','PATCH',{data:partial,step:8,revision:d.revision,csrfToken:d.csrfToken},dc)));
+   assert.equal(d.step,1);
+   const blockedPosition=await db.intakeDraft.findUniqueOrThrow({where:{sessionTokenHash:tokenHash(dc.split('=')[1])}});
+   assert.equal(blockedPosition.step,1);
+   record('Partial autosave cannot unlock or persist a later step');
    await json(await draft.PATCH(request('/api/intake/draft','PATCH',{data:partial,step:1,revision:d.revision-1,csrfToken:d.csrfToken},dc)),409);
    await json(await draft.PATCH(request('/api/intake/draft','PATCH',{data:partial,step:1,revision:d.revision,csrfToken:'wrong'},dc)),403);record('Autosave conflict and CSRF are enforced');
    const full=structuredClone(emptyIntake);

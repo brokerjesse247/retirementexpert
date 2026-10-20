@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { type IntakeData, draftSchema } from '@/lib/intake/schema';
+import { safeDraftStep } from '@/lib/intake/navigation';
 import { encryptJson } from '@/lib/auth/crypto';
 import { ApiError, clientRateLimitKey, DRAFT_COOKIE, errorResponse, jsonBody, noStore, requireCsrf, requireTrustedOrigin, setSessionCookie } from '@/lib/auth/http';
 import { createDraft, draftResponse, requireDraft } from '@/lib/services/drafts';
@@ -51,9 +52,10 @@ export async function PATCH(request: NextRequest) {
     const checked = draftSchema.safeParse(body.data);
     if (!checked.success) throw new ApiError(422, 'Invalid draft data.');
     const data = checked.data as IntakeData;
+    const allowedStep = safeDraftStep(data, step);
     const updated = await db.intakeDraft.updateMany({
       where: { id: context.draft.id, revision, submittedAt: null },
-      data: { encryptedData: encryptJson(data), email: draftEmail(data), step, revision: { increment: 1 } },
+      data: { encryptedData: encryptJson(data), email: draftEmail(data), step: allowedStep, revision: { increment: 1 } },
     });
     if (!updated.count) throw new ApiError(409, 'This draft was updated elsewhere. Reload and try again.');
     const fresh = await db.intakeDraft.findUniqueOrThrow({ where: { id: context.draft.id } });

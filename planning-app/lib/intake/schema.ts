@@ -198,7 +198,7 @@ const baseSchema = z.object({
   expenses: z.object({
     currentMonthly: money,
     retirementMonthly: money,
-    essentialMonthly: money,
+    essentialMonthly: optionalMoney,
     discretionaryMonthly: optionalMoney,
   }),
   oneTimeGoals: z.array(z.object({
@@ -247,22 +247,28 @@ const baseSchema = z.object({
   website: z.literal(''),
 });
 
-/** Final, server-shared submission contract. */
-export const intakeSchema = baseSchema.superRefine((data, context) => {
-  if (data.maritalStatus === 'MARRIED') {
-    const spouse = data.spouse;
-    if (!spouse.firstName) context.addIssue({ code: z.ZodIssueCode.custom, path: ['spouse', 'firstName'], message: 'Spouse first name is required when married.' });
-    if (!spouse.lastName) context.addIssue({ code: z.ZodIssueCode.custom, path: ['spouse', 'lastName'], message: 'Spouse last name is required when married.' });
-    if (!spouse.dob) context.addIssue({ code: z.ZodIssueCode.custom, path: ['spouse', 'dob'], message: 'Spouse date of birth is required when married.' });
-    if (!spouse.earnedIncome) context.addIssue({ code: z.ZodIssueCode.custom, path: ['spouse', 'earnedIncome'], message: 'Spouse earned income is required when married.' });
-    if (!spouse.pia) context.addIssue({ code: z.ZodIssueCode.custom, path: ['spouse', 'pia'], message: 'Spouse PIA is required when married.' });
-    if (!spouse.retirementAge) context.addIssue({ code: z.ZodIssueCode.custom, path: ['spouse', 'retirementAge'], message: 'Spouse retirement age is required when married.' });
-  }
+type BaseData = z.infer<typeof baseSchema>;
+type SpouseRequiredKey = 'firstName' | 'lastName' | 'dob' | 'earnedIncome' | 'pia' | 'retirementAge';
+const spouseRequiredLabels: Record<SpouseRequiredKey, string> = {
+  firstName: 'Spouse first name', lastName: 'Spouse last name', dob: 'Spouse date of birth',
+  earnedIncome: 'Spouse earned income', pia: 'Spouse PIA', retirementAge: 'Spouse retirement age',
+};
 
-  if (Number(data.expenses.essentialMonthly) > Number(data.expenses.retirementMonthly)) {
+function requireSpouseFields(data: { maritalStatus: string; spouse: Partial<BaseData['spouse']> }, context: z.RefinementCtx, keys: SpouseRequiredKey[]) {
+  if (data.maritalStatus === 'MARRIED') {
+    for (const key of keys) {
+      if (!data.spouse[key]) context.addIssue({ code: z.ZodIssueCode.custom, path: ['spouse', key], message: `${spouseRequiredLabels[key]} is required when married.` });
+    }
+  }
+}
+
+function validateSpending(data: Pick<BaseData, 'expenses'>, context: z.RefinementCtx) {
+  if (data.expenses.essentialMonthly !== '' && Number(data.expenses.essentialMonthly) > Number(data.expenses.retirementMonthly)) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ['expenses', 'essentialMonthly'], message: 'Essential spending cannot exceed total retirement spending.' });
   }
+}
 
+function validateAllocation(data: Pick<BaseData, 'allocation'>, context: z.RefinementCtx) {
   if (data.allocation.status === 'KNOWN') {
     const values = [data.allocation.stocksPercent, data.allocation.bondsPercent, data.allocation.cashPercent];
     if (values.some((value) => value === '')) {
@@ -271,22 +277,40 @@ export const intakeSchema = baseSchema.superRefine((data, context) => {
       context.addIssue({ code: z.ZodIssueCode.custom, path: ['allocation', 'stocksPercent'], message: 'Stocks, bonds, and cash must total 100%.' });
     }
   }
+}
 
+type BenefitAnswers = Pick<BaseData['primary'], 'receivingSocialSecurity' | 'socialSecurityMonthly' | 'socialSecurityStartAge'>;
+function validateBenefitDetails(data: { maritalStatus: string; primary: BenefitAnswers; spouse: BenefitAnswers }, context: z.RefinementCtx) {
   for (const owner of ['primary', 'spouse'] as const) {
+    if (owner === 'spouse' && data.maritalStatus !== 'MARRIED') continue;
     const person = data[owner];
     if (person.receivingSocialSecurity === 'YES') {
       if (!person.socialSecurityMonthly) context.addIssue({ code: z.ZodIssueCode.custom, path: [owner, 'socialSecurityMonthly'], message: 'Enter the current monthly benefit.' });
       if (!person.socialSecurityStartAge) context.addIssue({ code: z.ZodIssueCode.custom, path: [owner, 'socialSecurityStartAge'], message: 'Enter the benefit start age.' });
     }
   }
+}
 
+function validateLtcDetails(data: Pick<BaseData, 'health'>, context: z.RefinementCtx) {
   if (data.health.longTermCareInsurance === 'YES' && !data.health.longTermCareDailyBenefit) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ['health', 'longTermCareDailyBenefit'], message: 'Enter the daily long-term care benefit.' });
   }
+}
 
+function validateDistinctConcerns(data: Pick<BaseData, 'rankedConcerns'>, context: z.RefinementCtx) {
   if (new Set(data.rankedConcerns).size !== data.rankedConcerns.length) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ['rankedConcerns'], message: 'Choose three different concerns.' });
   }
+}
+
+/** Final, server-shared submission contract. */
+export const intakeSchema = baseSchema.superRefine((data, context) => {
+  requireSpouseFields(data, context, ['firstName', 'lastName', 'dob', 'earnedIncome', 'pia', 'retirementAge']);
+  validateSpending(data, context);
+  validateAllocation(data, context);
+  validateBenefitDetails(data, context);
+  validateLtcDetails(data, context);
+  validateDistinctConcerns(data, context);
 });
 
 export type IntakeData = z.infer<typeof intakeSchema>;
@@ -353,31 +377,66 @@ export const draftSchema = z.object({
   website: z.literal(''),
 }).strict();
 
-const stepPrefixes: Record<number, string[]> = {
-  1: ['firstName', 'lastName', 'email', 'phone', 'dob', 'state', 'maritalStatus', 'filingStatus', 'dependents', 'dependentsSpecialNeeds', 'spouse.firstName', 'spouse.lastName', 'spouse.dob', 'primary.employmentStatus', 'spouse.employmentStatus'],
-  2: ['primary.earnedIncome', 'spouse.earnedIncome', 'primary.pension', 'spouse.pension', 'primary.annuity', 'spouse.annuity', 'primary.rental', 'spouse.rental', 'primary.partTime', 'spouse.partTime'],
-  3: ['primary.preTax', 'spouse.preTax', 'primary.roth', 'spouse.roth', 'primary.traditional', 'spouse.traditional', 'primary.hsa', 'spouse.hsa', 'primary.brokerage', 'spouse.brokerage', 'primary.cashSavings', 'spouse.cashSavings', 'primary.annuityCash', 'spouse.annuityCash', 'primary.lifeInsuranceCash', 'spouse.lifeInsuranceCash', 'primary.employeeContribution', 'spouse.employeeContribution', 'primary.employerMatch', 'spouse.employerMatch', 'primary.iraRothContribution', 'spouse.iraRothContribution', 'allocation'],
-  4: ['expenses', 'oneTimeGoals', 'home', 'debts'],
-  5: ['primary.pia', 'spouse.pia', 'primary.receivingSocialSecurity', 'spouse.receivingSocialSecurity', 'primary.socialSecurity', 'spouse.socialSecurity', 'primary.claimAge', 'spouse.claimAge', 'primary.governmentPension', 'spouse.governmentPension', 'ssaUploadId'],
-  6: ['primary.retirementAge', 'spouse.retirementAge', 'lifestyle', 'rankedConcerns', 'legacyAmount', 'annualCharity'],
-  7: ['primary.healthStatus', 'spouse.healthStatus', 'primary.lifeInsurance', 'spouse.lifeInsurance', 'health', 'riskAnswers'],
-  8: ['estate', 'consent', 'website'],
+const incomeKeys = {
+  earnedIncome: true, pensionMonthly: true, pensionStartAge: true, pensionSurvivorPercent: true, pensionCola: true,
+  annuityMonthly: true, annuityStartAge: true, annuityTaxQualification: true, rentalOtherMonthly: true,
+  rentalEndAge: true, partTimeIncome: true, partTimeEndAge: true,
+} as const;
+const savingsKeys = {
+  preTax401k: true, roth401k: true, traditionalIra: true, rothIra: true, hsaBalance: true,
+  hsaEligibleForQualifiedExpenses: true, brokerage: true, brokerageCostBasis: true, cashSavingsCds: true,
+  annuityCashValue: true, lifeInsuranceCashValue: true, employeeContributionPercent: true,
+  employerMatchPercent: true, iraRothContribution: true,
+} as const;
+const benefitKeys = {
+  pia: true, receivingSocialSecurity: true, socialSecurityMonthly: true, socialSecurityStartAge: true,
+  claimAge: true, governmentPensionNonCovered: true,
+} as const;
+const protectionKeys = { healthStatus: true, lifeInsuranceType: true, lifeInsuranceDeathBenefit: true } as const;
+
+/** Validate only this page so invalid or unanswered FUTURE pages cannot abort
+ * conditional refinements (Zod skips object superRefine after fatal issues). */
+const stepSchemas: Record<number, z.ZodTypeAny> = {
+  1: baseSchema.pick({ firstName: true, lastName: true, email: true, phone: true, dob: true, state: true,
+    maritalStatus: true, filingStatus: true, dependents: true, dependentsSpecialNeeds: true }).extend({
+    primary: baseSchema.shape.primary.pick({ employmentStatus: true }),
+    spouse: baseSchema.shape.spouse.pick({ firstName: true, lastName: true, dob: true, employmentStatus: true }),
+  }).superRefine((data, context) => requireSpouseFields(data, context, ['firstName', 'lastName', 'dob'])),
+  2: baseSchema.pick({ maritalStatus: true }).extend({
+    primary: baseSchema.shape.primary.pick(incomeKeys), spouse: baseSchema.shape.spouse.pick(incomeKeys),
+  }).superRefine((data, context) => requireSpouseFields(data, context, ['earnedIncome'])),
+  3: baseSchema.pick({ allocation: true }).extend({
+    primary: baseSchema.shape.primary.pick(savingsKeys), spouse: baseSchema.shape.spouse.pick(savingsKeys),
+  }).superRefine(validateAllocation),
+  4: baseSchema.pick({ expenses: true, oneTimeGoals: true, home: true, debts: true }).superRefine(validateSpending),
+  5: baseSchema.pick({ maritalStatus: true, ssaUploadId: true }).extend({
+    primary: baseSchema.shape.primary.pick(benefitKeys), spouse: baseSchema.shape.spouse.pick(benefitKeys),
+  }).superRefine((data, context) => {
+    requireSpouseFields(data, context, ['pia']);
+    validateBenefitDetails(data, context);
+  }),
+  6: baseSchema.pick({ maritalStatus: true, lifestyle: true, rankedConcerns: true, legacyAmount: true, annualCharity: true }).extend({
+    primary: baseSchema.shape.primary.pick({ retirementAge: true }), spouse: baseSchema.shape.spouse.pick({ retirementAge: true }),
+  }).superRefine((data, context) => {
+    requireSpouseFields(data, context, ['retirementAge']);
+    validateDistinctConcerns(data, context);
+  }),
+  7: baseSchema.pick({ health: true, riskAnswers: true }).extend({
+    primary: baseSchema.shape.primary.pick(protectionKeys), spouse: baseSchema.shape.spouse.pick(protectionKeys),
+  }).superRefine(validateLtcDetails),
+  8: baseSchema.pick({ estate: true, consent: true, website: true }),
 };
 
-/**
- * Validates only the fields shown on a step. Final submission must still use
- * intakeSchema, which validates the entire object and cross-step rules.
- */
+/** Shared by client navigation and server draft-position checks. */
 export function validateStep(data: IntakeData, step: number): Record<string, string> {
-  const parsed = intakeSchema.safeParse(data);
+  const schema = stepSchemas[step];
+  if (!schema) return { step: 'Select a valid intake step.' };
+  const parsed = schema.safeParse(data);
   if (parsed.success) return {};
-  const prefixes = stepPrefixes[step] ?? [];
   const errors: Record<string, string> = {};
   for (const issue of parsed.error.issues) {
     const key = issue.path.join('.');
-    if (prefixes.some((prefix) => key === prefix || key.startsWith(`${prefix}.`) || key.startsWith(prefix) && /^[A-Z]/.test(key.slice(prefix.length, prefix.length + 1)))) {
-      errors[key] ??= issue.message;
-    }
+    errors[key] ??= issue.message;
   }
   return errors;
 }

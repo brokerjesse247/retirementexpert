@@ -3,12 +3,13 @@ import { CONSENT_TEXT } from '@/lib/intake/schema';
 type Props = {
   consent: boolean;
   submitting: boolean;
+  blocked?: boolean;
   error?: string;
   submissionError?: string;
   onConsentChange: (checked: boolean) => void;
 };
 
-export function IntakeSubmitControls({ consent, submitting, error, submissionError, onConsentChange }: Props) {
+export function IntakeSubmitControls({ consent, submitting, blocked = false, error, submissionError, onConsentChange }: Props) {
   return <div>
     <section className="notice" aria-labelledby="intake-consent-heading">
       <h3 id="intake-consent-heading">Consent required before submitting</h3>
@@ -21,6 +22,7 @@ export function IntakeSubmitControls({ consent, submitting, error, submissionErr
       {error && <p className="error" role="alert">{error}</p>}
     </section>
     {submissionError && <p className="error" role="alert">{submissionError}</p>}
-    <button type="submit" className="button button-primary" disabled={!consent || submitting} aria-describedby="intake-consent-help">{submitting ? 'Submitting securely…' : 'Submit retirement intake'}</button>
+    {blocked && consent && <p className="error" role="status">Correct the highlighted questions before submitting.</p>}
+    <button type="submit" className="button button-primary" disabled={!consent || submitting || blocked} aria-describedby="intake-consent-help">{submitting ? 'Submitting securely…' : 'Submit retirement intake'}</button>
   </div>;
 }

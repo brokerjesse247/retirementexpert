@@ -31,6 +31,12 @@ describe('Foundation integration regressions',()=>{
     const d=fixture();d.spouse.firstName='Stale';d.spouse.brokerage='999999';
     const n=normalizedIntake(d);expect((n.persons as any).create).toHaveLength(1);expect((n.accounts as any).create).toHaveLength(2);
   });
+  it('keeps optional essential spending unknown rather than fabricating zero',()=>{
+    const d=fixture();d.expenses.essentialMonthly='';
+    expect(intakeSchema.safeParse(d).success).toBe(true);
+    const n=normalizedIntake(d);
+    expect((n.expenses as any).create.find((e:any)=>e.kind==='ESSENTIAL_MONTHLY').amountCents).toBeNull();
+  });
   it('rejects fractional retirement ages and preserves fractional interest rates',()=>{
     const d=fixture();d.primary.retirementAge='65.5';expect(intakeSchema.safeParse(d).success).toBe(false);
     d.primary.retirementAge='65';d.debts=[{name:'Test',balance:'100',rate:'6.5',monthlyPayment:'5'}];expect(intakeSchema.safeParse(d).success).toBe(true);

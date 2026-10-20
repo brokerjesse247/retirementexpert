@@ -3,6 +3,8 @@
 import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { IntakeSubmitControls } from './IntakeSubmitControls';
+import { StepValidationSummary } from './StepValidationSummary';
+import { firstIncompleteStep, resolveStepNavigation, safeDraftStep } from '@/lib/intake/navigation';
 import {
   emptyIntake,
   intakeSchema,
@@ -108,8 +110,8 @@ function Field({ label, required, help, error, controlId, labelId, children }: {
         {label}{required ? <span aria-hidden="true"> *</span> : null}
       </label>
       {children}
-      {help ? <p className="muted"><span aria-hidden="true">ⓘ </span>{help}</p> : null}
-      {error ? <p className="error" role="alert">{error}</p> : null}
+      {help ? <p id={`${controlId ?? labelId}-help`} className="muted">{help}</p> : null}
+      {error ? <p id={`${controlId ?? labelId}-error`} className="error" role="alert">{error.startsWith('Invalid enum') ? 'Choose an answer.' : error}</p> : null}
     </div>
   );
 }
@@ -121,7 +123,7 @@ function TextControl({
 }) {
   const id = `intake-${path.replace(/[^a-z0-9]/gi, '-')}`;
   return <Field label={label} controlId={id} required={required} help={help} error={errors[path]}>
-    <input id={id} className="input" type={type} inputMode={inputMode} value={String(pathValue(data, path) ?? '')} onChange={(event) => onChange(path, event.target.value)} />
+    <input id={id} className="input" required={required} aria-invalid={Boolean(errors[path])} aria-describedby={[help ? `${id}-help` : '', errors[path] ? `${id}-error` : ''].filter(Boolean).join(' ') || undefined} type={type} inputMode={inputMode} value={String(pathValue(data, path) ?? '')} onChange={(event) => onChange(path, event.target.value)} />
   </Field>;
 }
 
@@ -129,21 +131,21 @@ function MoneyControl({ data, errors, path, label, required, help, onChange }: {
   const id = `intake-${path.replace(/[^a-z0-9]/gi, '-')}`;
   const value = String(pathValue(data, path) ?? '');
   return <Field label={label} controlId={id} required={required} help={help ?? 'Use a whole-dollar estimate from a recent statement.'} error={errors[path]}>
-    <input id={id} className="input" type="text" inputMode="numeric" placeholder="$0" value={value} onChange={(event) => onChange(path, event.target.value.replace(/[$,\s]/g, ''))} onBlur={() => onChange(path, formatWholeDollars(value))} />
+    <input id={id} className="input" required={required} aria-invalid={Boolean(errors[path])} aria-describedby={`${id}-help${errors[path] ? ` ${id}-error` : ''}`} type="text" inputMode="numeric" placeholder="$0" value={value} onChange={(event) => onChange(path, event.target.value.replace(/[$,\s]/g, ''))} onBlur={() => onChange(path, formatWholeDollars(value))} />
   </Field>;
 }
 
-function PercentControl({ data, errors, path, label, help, onChange }: { data: IntakeData; errors: Record<string, string>; path: string; label: string; help?: string; onChange: (path: string, value: string) => void }) {
+function PercentControl({ data, errors, path, label, required, help, onChange }: { data: IntakeData; errors: Record<string, string>; path: string; label: string; required?: boolean; help?: string; onChange: (path: string, value: string) => void }) {
   const id = `intake-${path.replace(/[^a-z0-9]/gi, '-')}`;
-  return <Field label={label} controlId={id} help={help ?? 'Enter a percentage from 0 to 100.'} error={errors[path]}>
-    <div className="input"><input id={id} type="text" inputMode="decimal" value={String(pathValue(data, path) ?? '')} onChange={(event) => onChange(path, event.target.value)} /> <span aria-hidden="true">%</span></div>
+  return <Field label={label} controlId={id} required={required} help={help ?? 'Enter a percentage from 0 to 100.'} error={errors[path]}>
+    <div className="input"><input id={id} required={required} aria-invalid={Boolean(errors[path])} aria-describedby={`${id}-help${errors[path] ? ` ${id}-error` : ''}`} type="text" inputMode="decimal" value={String(pathValue(data, path) ?? '')} onChange={(event) => onChange(path, event.target.value)} /> <span aria-hidden="true">%</span></div>
   </Field>;
 }
 
 function SelectControl({ data, errors, path, label, options, required, help, onChange }: { data: IntakeData; errors: Record<string, string>; path: string; label: string; options: { value: string; label: string }[]; required?: boolean; help?: string; onChange: (path: string, value: string) => void }) {
   const id = `intake-${path.replace(/[^a-z0-9]/gi, '-')}`;
   return <Field label={label} controlId={id} required={required} help={help} error={errors[path]}>
-    <select id={id} className="input" value={String(pathValue(data, path) ?? '')} onChange={(event) => onChange(path, event.target.value)}>
+    <select id={id} className="input" required={required} aria-invalid={Boolean(errors[path])} aria-describedby={errors[path] ? `${id}-error` : undefined} value={String(pathValue(data, path) ?? '')} onChange={(event) => onChange(path, event.target.value)}>
       <option value="">Select an option</option>
       {options.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
     </select>
@@ -154,7 +156,7 @@ function RadioControl({ data, errors, path, label, options, required, help, onCh
   const value = String(pathValue(data, path) ?? '');
   const labelId = `intake-${path.replace(/[^a-z0-9]/gi, '-')}-label`;
   return <Field label={label} labelId={labelId} required={required} help={help} error={errors[path]}>
-    <div className="form-grid" role="radiogroup" aria-labelledby={labelId}>
+    <div className="form-grid" role="radiogroup" aria-labelledby={labelId} aria-invalid={Boolean(errors[path])} aria-describedby={errors[path] ? `${labelId}-error` : undefined}>
       {options.map((item) => <label className="notice" key={item.value}><input type="radio" name={path} checked={value === item.value} onChange={() => onChange(path, item.value)} /> {item.label}</label>)}
     </div>
   </Field>;
@@ -175,6 +177,20 @@ function SummaryValue({ value }: { value: unknown }) {
 
 function humanize(value: string) {
   return value.replace(/([a-z])([A-Z])/g, '$1 $2').replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function focusQuestion(path: string) {
+  window.requestAnimationFrame(() => {
+    const id = `intake-${path.replace(/[^a-z0-9]/gi, '-')}`;
+    const riskIndex = path.startsWith('riskAnswers.') ? path.split('.')[1] : '0';
+    const concernIndex = path.startsWith('rankedConcerns.') ? path.split('.')[1] : '0';
+    const control = document.getElementById(id)
+      ?? (path.startsWith('riskAnswers') ? document.querySelector<HTMLElement>(`[name="risk-${riskIndex}"]`) : null)
+      ?? (path.startsWith('rankedConcerns') ? document.getElementById(`intake-ranked-concern-${concernIndex}`) : null)
+      ?? document.querySelector<HTMLElement>('[aria-invalid="true"]');
+    control?.focus();
+    control?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
 }
 
 function ReviewSection({ title, detail, value, onEdit, step }: { title: string; detail: string; value: unknown; onEdit: () => void; step: number }) {
@@ -207,7 +223,6 @@ export function IntakeForm() {
   const savePendingRef = useRef(false);
   const saveLoopRef = useRef<Promise<boolean> | null>(null);
 
-  useEffect(() => { dataRef.current = data; }, [data]);
   useEffect(() => { stepRef.current = step; }, [step]);
   useEffect(() => { revisionRef.current = revision; }, [revision]);
   useEffect(() => { csrfRef.current = csrfToken; }, [csrfToken]);
@@ -218,7 +233,7 @@ export function IntakeForm() {
   }, []);
 
   const setCurrentStep = useCallback((nextStep: number, persist = true) => {
-    const normalized = Math.max(1, Math.min(8, nextStep));
+    const normalized = safeDraftStep(dataRef.current, nextStep);
     if (stepRef.current === normalized) return;
     stepRef.current = normalized;
     setStep(normalized);
@@ -243,10 +258,12 @@ export function IntakeForm() {
       }
       const recovered = mergeDraft(emptyIntake, draft.data) as IntakeData;
       dataRef.current = recovered;
-      stepRef.current = Math.max(1, Math.min(8, Number(draft.step) || 1));
+      stepRef.current = safeDraftStep(recovered, Number(draft.step) || 1);
       revisionRef.current = Number(draft.revision) || 0;
       csrfRef.current = draft.csrfToken || '';
       dirtyRef.current = false;
+      setErrors({});
+      setSubmissionError('');
       setData(recovered);
       setStep(stepRef.current);
       setRevision(revisionRef.current);
@@ -309,6 +326,8 @@ export function IntakeForm() {
 
           if (changeVersionRef.current === snapshotVersion) {
             dirtyRef.current = false;
+            stepRef.current = safeDraftStep(dataRef.current, saved.step);
+            setStep(stepRef.current);
             setSaveState('saved');
             setSaveMessage('Saved securely');
           } else {
@@ -349,7 +368,10 @@ export function IntakeForm() {
 
   const update = useCallback((path: string, value: string | boolean) => {
     markDirty();
-    setData((current) => setPath(current, path, value));
+    const nextData = setPath(dataRef.current, path, value);
+    dataRef.current = nextData;
+    setData(nextData);
+    setSubmissionError('');
     setErrors((current) => {
       const next = { ...current };
       delete next[path];
@@ -359,26 +381,26 @@ export function IntakeForm() {
 
   const mutate = useCallback((callback: (draft: Record<string, unknown>) => void) => {
     markDirty();
-    setData((current) => {
-      const next = structuredClone(current) as unknown as Record<string, unknown>;
-      callback(next);
-      return next as unknown as IntakeData;
-    });
+    const next = structuredClone(dataRef.current) as unknown as Record<string, unknown>;
+    callback(next);
+    dataRef.current = next as unknown as IntakeData;
+    setData(dataRef.current);
+    setErrors({});
+    setSubmissionError('');
   }, [markDirty]);
 
   const updateMaritalStatus = useCallback((value: string) => {
     markDirty();
-    setData((current) => {
-      const next = structuredClone(current) as unknown as Record<string, unknown>;
-      // Marital status is a root field. Clear the entire conditional spouse record when it no longer applies.
-      next.maritalStatus = value;
-      const filing = String(next.filingStatus ?? '');
-      if (!filing || filing === 'SINGLE' || filing === 'MARRIED_FILING_JOINTLY') {
-        next.filingStatus = value === 'MARRIED' ? 'MARRIED_FILING_JOINTLY' : 'SINGLE';
-      }
-      if (value !== 'MARRIED') next.spouse = structuredClone(emptyIntake.spouse);
-      return next as unknown as IntakeData;
-    });
+    const next = structuredClone(dataRef.current) as unknown as Record<string, unknown>;
+    next.maritalStatus = value;
+    const filing = String(next.filingStatus ?? '');
+    if (!filing || filing === 'SINGLE' || filing === 'MARRIED_FILING_JOINTLY') {
+      next.filingStatus = value === 'MARRIED' ? 'MARRIED_FILING_JOINTLY' : 'SINGLE';
+    }
+    if (value !== 'MARRIED') next.spouse = structuredClone(emptyIntake.spouse);
+    dataRef.current = next as unknown as IntakeData;
+    setData(dataRef.current);
+    setSubmissionError('');
     setErrors((current) => Object.fromEntries(Object.entries(current).filter(([path]) => path !== 'maritalStatus' && !path.startsWith('spouse.'))));
   }, [markDirty]);
 
@@ -397,26 +419,25 @@ export function IntakeForm() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [firstInvalidStep, setCurrentStep]);
 
-  const nextStep = () => {
-    for (let number = 1; number <= stepRef.current; number += 1) {
-      const nextErrors = validateStep(dataRef.current, number);
-      if (Object.keys(nextErrors).length) {
-        setErrors(nextErrors);
-        setSaveMessage('Please correct the highlighted fields before continuing.');
-        if (number !== stepRef.current) setCurrentStep(number);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        return;
-      }
+  const navigateToStep = (target: number) => {
+    const result = resolveStepNavigation(dataRef.current, stepRef.current, target);
+    if (!result.allowed) {
+      setErrors(result.errors);
+      setSubmissionError(`Complete Step ${result.step} before continuing. Your answers remain saved as a draft.`);
+      setCurrentStep(result.step);
+      focusQuestion(Object.keys(result.errors)[0]);
+      return;
     }
     setErrors({});
-    setCurrentStep(stepRef.current + 1);
+    setSubmissionError('');
+    setCurrentStep(result.step);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const nextStep = () => navigateToStep(stepRef.current + 1);
+
   const previousStep = () => {
-    setErrors({});
-    setCurrentStep(stepRef.current - 1);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    navigateToStep(stepRef.current - 1);
   };
 
   const sendResume = async () => {
@@ -475,7 +496,10 @@ export function IntakeForm() {
     event.preventDefault();
     if (submitting) return;
     setSubmissionError('');
-    if (stepRef.current !== 8) return;
+    if (stepRef.current !== 8) {
+      nextStep();
+      return;
+    }
     if (dataRef.current.consent !== true) {
       setErrors((current) => ({ ...current, consent: 'Consent is required to submit.' }));
       setSubmissionError('Check the consent box if you agree before submitting. Your answers remain saved as a draft.');
@@ -533,26 +557,23 @@ export function IntakeForm() {
 
   const currentStep = useMemo(() => steps[step - 1], [step]);
   const married = data.maritalStatus === 'MARRIED';
-  const progress = Math.round((step / 8) * 100);
-  const completedStep = useMemo(() => {
-    let completed = 0;
-    for (let number = 1; number <= 8; number += 1) {
-      if (Object.keys(validateStep(data, number)).length) break;
-      completed = number;
+  const earliestIncomplete = useMemo(() => firstIncompleteStep(data), [data]);
+  const completedStep = earliestIncomplete === null ? 8 : earliestIncomplete - 1;
+  const progress = Math.round((completedStep / 8) * 100);
+  const currentErrors = useMemo(() => validateStep(data, step), [data, step]);
+  const displayErrors = { ...errors, ...currentErrors };
+  const continueLocked = earliestIncomplete !== null && earliestIncomplete <= step;
+  const goToStep = navigateToStep;
+
+  useEffect(() => {
+    if (!ready) return;
+    const allowed = safeDraftStep(dataRef.current, stepRef.current);
+    if (allowed < stepRef.current) {
+      setErrors(validateStep(dataRef.current, allowed));
+      setSubmissionError(`Complete Step ${allowed} before continuing.`);
+      setCurrentStep(allowed);
     }
-    return completed;
-  }, [data]);
-  const goToStep = (target: number) => {
-    if (target <= completedStep + 1) {
-      setErrors({});
-      setCurrentStep(target);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      const currentErrors = validateStep(dataRef.current, Math.min(target - 1, 8));
-      setErrors(currentErrors);
-      setSaveMessage('Complete the highlighted step before moving ahead.');
-    }
-  };
+  }, [data, ready, setCurrentStep]);
 
   if (!ready) {
     return <main className="page-shell intake-shell"><section className="card intake-card"><p className="eyebrow">LSRT Insurance</p><h1>Retirement planning intake</h1><p className="notice"><strong>Development preview — fictional information only.</strong> Do not enter or upload real personal, financial, or account information until this intake is released.</p><p className={saveState === 'error' ? 'error' : 'muted'} role="status">{saveMessage}</p>{saveState === 'error' ? <button className="button button-primary" type="button" onClick={() => void loadDraft()}>Retry opening draft</button> : null}</section></main>;
@@ -580,22 +601,23 @@ export function IntakeForm() {
         <p className="eyebrow">Step {step}</p>
         <h2 className="section-title">{currentStep.title}</h2>
         <p className="muted">{currentStep.description}</p>
+        <StepValidationSummary step={step} errors={currentErrors} onFocusField={focusQuestion} />
 
-        {step === 1 ? <AboutStep data={data} errors={errors} married={married} onChange={update} onMaritalChange={updateMaritalStatus} /> : null}
-        {step === 2 ? <IncomeStep data={data} errors={errors} married={married} onChange={update} /> : null}
-        {step === 3 ? <SavingsStep data={data} errors={errors} married={married} onChange={update} /> : null}
-        {step === 4 ? <ExpensesStep data={data} errors={errors} onChange={update} mutate={mutate} /> : null}
-        {step === 5 ? <SocialSecurityStep data={data} errors={errors} married={married} onChange={update} upload={upload} uploading={uploading} onUpload={uploadSsa} /> : null}
-        {step === 6 ? <GoalsStep data={data} errors={errors} married={married} onChange={update} mutate={mutate} /> : null}
-        {step === 7 ? <HealthStep data={data} errors={errors} married={married} onChange={update} mutate={mutate} /> : null}
-        {step === 8 ? <EstateReviewStep data={data} errors={errors} onChange={update} onEdit={goToStep} /> : null}
+        {step === 1 ? <AboutStep data={data} errors={displayErrors} married={married} onChange={update} onMaritalChange={updateMaritalStatus} /> : null}
+        {step === 2 ? <IncomeStep data={data} errors={displayErrors} married={married} onChange={update} /> : null}
+        {step === 3 ? <SavingsStep data={data} errors={displayErrors} married={married} onChange={update} /> : null}
+        {step === 4 ? <ExpensesStep data={data} errors={displayErrors} onChange={update} mutate={mutate} /> : null}
+        {step === 5 ? <SocialSecurityStep data={data} errors={displayErrors} married={married} onChange={update} upload={upload} uploading={uploading} onUpload={uploadSsa} /> : null}
+        {step === 6 ? <GoalsStep data={data} errors={displayErrors} married={married} onChange={update} mutate={mutate} /> : null}
+        {step === 7 ? <HealthStep data={data} errors={displayErrors} married={married} onChange={update} mutate={mutate} /> : null}
+        {step === 8 ? <EstateReviewStep data={data} errors={displayErrors} onChange={update} onEdit={goToStep} /> : null}
       </section>
 
       <section className="card intake-card">
         {submissionError && step !== 8 ? <p className="error" role="alert">{submissionError}</p> : null}
         <div className="form-grid">
           <div>{step > 1 ? <button type="button" className="button" onClick={previousStep}>Back</button> : null}</div>
-          <div>{step < 8 ? <button type="button" className="button button-primary" onClick={nextStep}>Continue</button> : <IntakeSubmitControls consent={Boolean(data.consent)} submitting={submitting} error={errors.consent} submissionError={submissionError} onConsentChange={(checked) => update('consent', checked)} />}</div>
+          <div>{step < 8 ? <><button type="button" className="button button-primary" disabled={continueLocked} aria-describedby={continueLocked ? 'intake-step-errors' : undefined} onClick={nextStep}>Continue</button>{continueLocked ? <p className="error">Answer the highlighted questions to unlock Continue.</p> : null}</> : <IntakeSubmitControls consent={Boolean(data.consent)} submitting={submitting} blocked={continueLocked} error={displayErrors.consent} submissionError={submissionError} onConsentChange={(checked) => update('consent', checked)} />}</div>
         </div>
         <div className="notice">
           <strong>Development-preview resume links</strong>
@@ -633,7 +655,7 @@ function AboutStep({ data, errors, married, onChange, onMaritalChange }: { data:
 function IncomePerson({ data, errors, owner, onChange }: { data: IntakeData; errors: Record<string, string>; owner: 'primary' | 'spouse'; onChange: (path: string, value: string | boolean) => void }) {
   const prefix = owner;
   return <PersonHeading owner={owner}><h3>{owner === 'primary' ? 'Your income' : 'Spouse income'}</h3><div className="form-grid">
-    <MoneyControl data={data} errors={errors} path={`${prefix}.earnedIncome`} label="Annual gross earned income" required onChange={onChange} help="Use annual income before taxes and deductions." />
+    <MoneyControl data={data} errors={errors} path={`${prefix}.earnedIncome`} label="Annual gross earned income" required onChange={onChange} help="Use annual income before taxes and deductions. Enter 0 if there is no earned income." />
     <MoneyControl data={data} errors={errors} path={`${prefix}.pensionMonthly`} label="Expected pension at retirement (monthly)" onChange={onChange} />
     <TextControl data={data} errors={errors} path={`${prefix}.pensionStartAge`} label="Pension start age" type="number" inputMode="numeric" onChange={onChange} />
     <SelectControl data={data} errors={errors} path={`${prefix}.pensionSurvivorPercent`} label="Pension survivor percentage" options={[{ value: '0', label: '0%' }, { value: '50', label: '50%' }, { value: '75', label: '75%' }, { value: '100', label: '100%' }]} onChange={onChange} />
@@ -674,7 +696,7 @@ function SavingsPerson({ data, errors, owner, onChange }: { data: IntakeData; er
 
 function SavingsStep({ data, errors, married, onChange }: { data: IntakeData; errors: Record<string, string>; married: boolean; onChange: (path: string, value: string | boolean) => void }) {
   const known = data.allocation.status === 'KNOWN';
-  return <><SavingsPerson data={data} errors={errors} owner="primary" onChange={onChange} />{married ? <SavingsPerson data={data} errors={errors} owner="spouse" onChange={onChange} /> : null}<section className="card"><h3>Approximate household mix</h3><RadioControl data={data} errors={errors} path="allocation.status" label="Do you know your stock, bond and cash mix?" options={[{ value: 'KNOWN', label: 'Yes, I know the mix' }, { value: 'NOT_SURE', label: 'Not sure' }]} onChange={onChange} />{known ? <div className="form-grid"><PercentControl data={data} errors={errors} path="allocation.stocksPercent" label="Stocks" onChange={onChange} /><PercentControl data={data} errors={errors} path="allocation.bondsPercent" label="Bonds" onChange={onChange} /><PercentControl data={data} errors={errors} path="allocation.cashPercent" label="Cash" onChange={onChange} /></div> : null}</section></>;
+  return <><SavingsPerson data={data} errors={errors} owner="primary" onChange={onChange} />{married ? <SavingsPerson data={data} errors={errors} owner="spouse" onChange={onChange} /> : null}<section className="card"><h3>Approximate household mix</h3><RadioControl data={data} errors={errors} path="allocation.status" label="Do you know your stock, bond and cash mix?" options={[{ value: 'KNOWN', label: 'Yes, I know the mix' }, { value: 'NOT_SURE', label: 'Not sure' }]} onChange={onChange} />{known ? <div className="form-grid"><PercentControl data={data} errors={errors} path="allocation.stocksPercent" label="Stocks" required onChange={onChange} /><PercentControl data={data} errors={errors} path="allocation.bondsPercent" label="Bonds" required onChange={onChange} /><PercentControl data={data} errors={errors} path="allocation.cashPercent" label="Cash" required onChange={onChange} /></div> : null}</section></>;
 }
 
 function ExpensesStep({ data, errors, onChange, mutate }: { data: IntakeData; errors: Record<string, string>; onChange: (path: string, value: string | boolean) => void; mutate: (callback: (draft: Record<string, unknown>) => void) => void }) {
@@ -688,7 +710,7 @@ function ExpensesStep({ data, errors, onChange, mutate }: { data: IntakeData; er
     <div className="form-grid">
       <MoneyControl data={data} errors={errors} path="expenses.currentMonthly" label="Current monthly spending" required onChange={onChange} />
       <MoneyControl data={data} errors={errors} path="expenses.retirementMonthly" label="Expected monthly spending in retirement" required onChange={onChange} help="Use today’s dollars; you can update this with your advisor." />
-      <MoneyControl data={data} errors={errors} path="expenses.essentialMonthly" label="Essential monthly retirement spending" required onChange={onChange} help="Include needs such as housing, food, utilities, taxes and insurance. Do not assume all spending is essential." />
+      <MoneyControl data={data} errors={errors} path="expenses.essentialMonthly" label="Essential monthly retirement spending (optional)" onChange={onChange} help="Include needs such as housing, food, utilities, taxes and insurance. Leave blank if unknown; do not assume all spending is essential." />
       <MoneyControl data={data} errors={errors} path="expenses.discretionaryMonthly" label="Discretionary monthly retirement spending" onChange={onChange} help="Include flexible spending such as travel and hobbies." />
     </div>
     <button type="button" className="button" onClick={suggestRetirementSpending}>Use 80% of current spending</button>
@@ -715,7 +737,7 @@ function SocialSecurityPerson({ data, errors, owner, onChange }: { data: IntakeD
   return <PersonHeading owner={owner}><h3>{owner === 'primary' ? 'Your Social Security' : 'Spouse Social Security'}</h3><div className="form-grid">
     <MoneyControl data={data} errors={errors} path={`${p}.pia`} label="Estimated monthly benefit at Full Retirement Age (PIA)" required onChange={onChange} help="Log in at ssa.gov/myaccount and use the amount shown at your full retirement age." />
     <SelectControl data={data} errors={errors} path={`${p}.receivingSocialSecurity`} label="Already receiving benefits?" options={yesNoOptions} onChange={onChange} />
-    {receiving ? <><MoneyControl data={data} errors={errors} path={`${p}.socialSecurityMonthly`} label="Current benefit amount (monthly)" onChange={onChange} /><TextControl data={data} errors={errors} path={`${p}.socialSecurityStartAge`} label="Benefit start age" type="number" inputMode="numeric" onChange={onChange} /></> : null}
+    {receiving ? <><MoneyControl data={data} errors={errors} path={`${p}.socialSecurityMonthly`} label="Current benefit amount (monthly)" required onChange={onChange} /><TextControl data={data} errors={errors} path={`${p}.socialSecurityStartAge`} label="Benefit start age" required type="number" inputMode="numeric" onChange={onChange} /></> : null}
     <SelectControl data={data} errors={errors} path={`${p}.claimAge`} label="Planned claiming age" options={[...Array.from({ length: 9 }, (_, index) => ({ value: String(index + 62), label: `Age ${index + 62}` })), { value: 'ADVISE_ME', label: 'Advise me' }]} onChange={onChange} />
     <SelectControl data={data} errors={errors} path={`${p}.governmentPensionNonCovered`} label="Government pension from non-covered work?" options={yesNoOptions} help="Informational only; it helps your advisor ask the right questions." onChange={onChange} />
   </div></PersonHeading>;
@@ -728,7 +750,7 @@ function SocialSecurityStep({ data, errors, married, onChange, upload, uploading
 function GoalsStep({ data, errors, married, onChange, mutate }: { data: IntakeData; errors: Record<string, string>; married: boolean; onChange: (path: string, value: string | boolean) => void; mutate: (callback: (draft: Record<string, unknown>) => void) => void }) {
   const ranked = Array.from({ length: 3 }, (_, index) => data.rankedConcerns[index] ?? '');
   const setConcern = (index: number, value: string) => mutate((draft) => { const list = Array.from({ length: 3 }, (_, current) => (draft.rankedConcerns as string[])[current] ?? ''); list[index] = value; draft.rankedConcerns = list; });
-  return <><div className="form-grid"><TextControl data={data} errors={errors} path="primary.retirementAge" label="Your desired retirement age" type="number" required inputMode="numeric" onChange={onChange} />{married ? <TextControl data={data} errors={errors} path="spouse.retirementAge" label="Spouse desired retirement age" type="number" required inputMode="numeric" onChange={onChange} /> : null}<SelectControl data={data} errors={errors} path="lifestyle" label="Retirement lifestyle" options={[{ value: 'SIMPLE', label: 'Simple' }, { value: 'COMFORTABLE', label: 'Comfortable' }, { value: 'ACTIVE_TRAVEL', label: 'Active-travel' }, { value: 'LUXURY', label: 'Luxury' }]} onChange={onChange} /></div><section className="card"><h3>Rank your top three concerns</h3><p className="muted">Choose three different concerns, in order of importance.</p><div className="form-grid">{ranked.map((value, index) => { const id = `intake-ranked-concern-${index}`; return <Field key={index} label={`Priority ${index + 1}`} controlId={id} required error={errors.rankedConcerns}><select id={id} className="input" value={value} onChange={(event) => setConcern(index, event.target.value)}><option value="">Select a concern</option>{concernOptions.map((option) => <option key={option.value} value={option.value} disabled={ranked.some((item, other) => other !== index && item === option.value)}>{option.label}</option>)}</select></Field>; })}</div></section><div className="form-grid"><MoneyControl data={data} errors={errors} path="legacyAmount" label="Desired amount to leave heirs or charity" onChange={onChange} /><MoneyControl data={data} errors={errors} path="annualCharity" label="Charitable giving each year" onChange={onChange} /></div></>;
+  return <><div className="form-grid"><TextControl data={data} errors={errors} path="primary.retirementAge" label="Your desired retirement age" type="number" required inputMode="numeric" onChange={onChange} />{married ? <TextControl data={data} errors={errors} path="spouse.retirementAge" label="Spouse desired retirement age" type="number" required inputMode="numeric" onChange={onChange} /> : null}<SelectControl data={data} errors={errors} path="lifestyle" label="Retirement lifestyle" options={[{ value: 'SIMPLE', label: 'Simple' }, { value: 'COMFORTABLE', label: 'Comfortable' }, { value: 'ACTIVE_TRAVEL', label: 'Active-travel' }, { value: 'LUXURY', label: 'Luxury' }]} onChange={onChange} /></div><section className="card"><h3>Rank your top three concerns</h3><p className="muted">Choose three different concerns, in order of importance.</p><div className="form-grid">{ranked.map((value, index) => { const id = `intake-ranked-concern-${index}`; return <Field key={index} label={`Priority ${index + 1}`} controlId={id} required error={errors[`rankedConcerns.${index}`] ?? errors.rankedConcerns}><select id={id} className="input" required aria-invalid={Boolean(errors[`rankedConcerns.${index}`] ?? errors.rankedConcerns)} value={value} onChange={(event) => setConcern(index, event.target.value)}><option value="">Select a concern</option>{concernOptions.map((option) => <option key={option.value} value={option.value} disabled={ranked.some((item, other) => other !== index && item === option.value)}>{option.label}</option>)}</select></Field>; })}</div></section><div className="form-grid"><MoneyControl data={data} errors={errors} path="legacyAmount" label="Desired amount to leave heirs or charity" onChange={onChange} /><MoneyControl data={data} errors={errors} path="annualCharity" label="Charitable giving each year" onChange={onChange} /></div></>;
 }
 
 function HealthStep({ data, errors, married, onChange, mutate }: { data: IntakeData; errors: Record<string, string>; married: boolean; onChange: (path: string, value: string | boolean) => void; mutate: (callback: (draft: Record<string, unknown>) => void) => void }) {
@@ -736,7 +758,7 @@ function HealthStep({ data, errors, married, onChange, mutate }: { data: IntakeD
   const updateRisk = (question: number, answer: number) => mutate((draft) => { const answers = Array.from({ length: 5 }, (_, index) => Number((draft.riskAnswers as number[])[index] ?? 0)); answers[question] = answer; draft.riskAnswers = answers; });
   const score = data.riskAnswers.reduce((total, answer) => total + answer, 0);
   const riskLabel = data.riskAnswers.length === 5 && data.riskAnswers.every((answer) => answer >= 1 && answer <= 5) ? score <= 11 ? 'Conservative' : score <= 18 ? 'Moderate' : 'Aggressive' : '';
-  return <><div className="form-grid"><SelectControl data={data} errors={errors} path="primary.healthStatus" label="Your health status" options={healthOptions} onChange={onChange} />{married ? <SelectControl data={data} errors={errors} path="spouse.healthStatus" label="Spouse health status" options={healthOptions} onChange={onChange} /> : null}<SelectControl data={data} errors={errors} path="health.familyLongevity" label="Did either parent live past age 85?" options={yesNoOptions} onChange={onChange} /><SelectControl data={data} errors={errors} path="health.currentCoverage" label="Current health coverage" options={coverageOptions} onChange={onChange} /><SelectControl data={data} errors={errors} path="health.preMedicarePlan" label="Plan before Medicare" options={coverageOptions} onChange={onChange} /></div><section className="card"><h3>Insurance protection</h3><div className="form-grid"><SelectControl data={data} errors={errors} path="primary.lifeInsuranceType" label="Your life insurance type" options={lifeInsuranceOptions} onChange={onChange} /><MoneyControl data={data} errors={errors} path="primary.lifeInsuranceDeathBenefit" label="Your life insurance death benefit" onChange={onChange} />{married ? <><SelectControl data={data} errors={errors} path="spouse.lifeInsuranceType" label="Spouse life insurance type" options={lifeInsuranceOptions} onChange={onChange} /><MoneyControl data={data} errors={errors} path="spouse.lifeInsuranceDeathBenefit" label="Spouse life insurance death benefit" onChange={onChange} /></> : null}<SelectControl data={data} errors={errors} path="health.longTermCareInsurance" label="Long-term care insurance?" options={yesNoOptions} onChange={onChange} />{hasLtc ? <MoneyControl data={data} errors={errors} path="health.longTermCareDailyBenefit" label="Long-term care daily benefit" onChange={onChange} /> : null}<SelectControl data={data} errors={errors} path="health.disabilityInsurance" label="Disability insurance (if still working)?" options={yesNoOptions} onChange={onChange} /></div></section><section className="card"><h3>Risk questionnaire</h3><p className="muted">This is a planning preference discussion, not a recommendation or a health underwriting assessment.</p>{riskQuestions.map((question, index) => { const labelId = `intake-risk-${index}-label`; return <Field key={question} label={`${index + 1}. ${question}`} labelId={labelId} required error={errors.riskAnswers}><div className="form-grid" role="radiogroup" aria-labelledby={labelId}>{riskChoices.map((choice, choiceIndex) => <label className="notice" key={choice}><input type="radio" name={`risk-${index}`} checked={data.riskAnswers[index] === choiceIndex + 1} onChange={() => updateRisk(index, choiceIndex + 1)} /> {choice}</label>)}</div></Field>; })}{riskLabel ? <p className="pill">Current profile: {riskLabel} ({score}/25)</p> : null}</section></>;
+  return <><div className="form-grid"><SelectControl data={data} errors={errors} path="primary.healthStatus" label="Your health status" options={healthOptions} onChange={onChange} />{married ? <SelectControl data={data} errors={errors} path="spouse.healthStatus" label="Spouse health status" options={healthOptions} onChange={onChange} /> : null}<SelectControl data={data} errors={errors} path="health.familyLongevity" label="Did either parent live past age 85?" options={yesNoOptions} onChange={onChange} /><SelectControl data={data} errors={errors} path="health.currentCoverage" label="Current health coverage" options={coverageOptions} onChange={onChange} /><SelectControl data={data} errors={errors} path="health.preMedicarePlan" label="Plan before Medicare" options={coverageOptions} onChange={onChange} /></div><section className="card"><h3>Insurance protection</h3><div className="form-grid"><SelectControl data={data} errors={errors} path="primary.lifeInsuranceType" label="Your life insurance type" options={lifeInsuranceOptions} onChange={onChange} /><MoneyControl data={data} errors={errors} path="primary.lifeInsuranceDeathBenefit" label="Your life insurance death benefit" onChange={onChange} />{married ? <><SelectControl data={data} errors={errors} path="spouse.lifeInsuranceType" label="Spouse life insurance type" options={lifeInsuranceOptions} onChange={onChange} /><MoneyControl data={data} errors={errors} path="spouse.lifeInsuranceDeathBenefit" label="Spouse life insurance death benefit" onChange={onChange} /></> : null}<SelectControl data={data} errors={errors} path="health.longTermCareInsurance" label="Long-term care insurance?" options={yesNoOptions} onChange={onChange} />{hasLtc ? <MoneyControl data={data} errors={errors} path="health.longTermCareDailyBenefit" label="Long-term care daily benefit" required onChange={onChange} /> : null}<SelectControl data={data} errors={errors} path="health.disabilityInsurance" label="Disability insurance (if still working)?" options={yesNoOptions} onChange={onChange} /></div></section><section className="card"><h3>Risk questionnaire</h3><p className="muted">This is a planning preference discussion, not a recommendation or a health underwriting assessment.</p>{riskQuestions.map((question, index) => { const labelId = `intake-risk-${index}-label`; return <Field key={question} label={`${index + 1}. ${question}`} labelId={labelId} required error={errors[`riskAnswers.${index}`] ?? errors.riskAnswers}><div className="form-grid" role="radiogroup" aria-labelledby={labelId} aria-invalid={Boolean(errors[`riskAnswers.${index}`] ?? errors.riskAnswers)} aria-describedby={errors[`riskAnswers.${index}`] ?? errors.riskAnswers ? `${labelId}-error` : undefined}>{riskChoices.map((choice, choiceIndex) => <label className="notice" key={choice}><input type="radio" name={`risk-${index}`} checked={data.riskAnswers[index] === choiceIndex + 1} onChange={() => updateRisk(index, choiceIndex + 1)} /> {choice}</label>)}</div></Field>; })}{riskLabel ? <p className="pill">Current profile: {riskLabel} ({score}/25)</p> : null}</section></>;
 }
 
 function EstateReviewStep({ data, errors, onChange, onEdit }: { data: IntakeData; errors: Record<string, string>; onChange: (path: string, value: string | boolean) => void; onEdit: (step: number) => void }) {

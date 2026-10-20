@@ -15,3 +15,9 @@
 .password-control .password-toggle { flex: 0 0 auto; padding: 10px 12px; font-size: 11px; }
 .password-entry-help { margin: 0; font-size: 11px; line-height: 1.6; }
 @media (max-width: 420px) { .password-control { flex-direction: column; } }
+
+.step-validation-summary { margin: 20px 0 28px; }
+.step-validation-summary ul { padding-left: 20px; margin-bottom: 0; }
+.step-validation-summary li { margin: 9px 0; }
+.validation-question-link { border: 0; background: transparent; color: #47B5FF; padding: 0; font: inherit; text-align: left; text-decoration: underline; cursor: pointer; }
+.intake-shell [aria-invalid="true"] { outline: 1px solid #E99090; outline-offset: 2px; }
