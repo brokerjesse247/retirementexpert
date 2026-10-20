@@ -1,0 +1,427 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum ClientStatus {
+  NEW
+  IN_REVIEW
+  REPORT_GENERATED
+  PRESENTED
+  IMPLEMENTING
+  ANNUAL_REVIEW_DUE
+  ARCHIVED
+}
+
+enum PersonRole {
+  PRIMARY
+  SPOUSE
+}
+enum AccountOwner {
+  PRIMARY
+  SPOUSE
+  HOUSEHOLD
+}
+enum AccountType {
+  K401_PRETAX
+  ROTH_401K
+  TRAD_IRA
+  ROTH_IRA
+  HSA
+  BROKERAGE
+  CASH
+  ANNUITY
+  CASH_VALUE_LIFE
+}
+enum IncomeType {
+  PENSION
+  ANNUITY
+  RENTAL
+  PART_TIME
+  OTHER
+}
+enum OutboxStatus {
+  PENDING
+  SENDING
+  RETRY
+  SENT
+  FAILED
+}
+enum GrantPurpose {
+  RESUME
+}
+
+enum ScenarioStatus {
+  DRAFT
+  ARCHIVED
+}
+enum RecommendationStatus {
+  PROPOSED
+  APPROVED
+  EDITED
+  REMOVED
+}
+
+model Advisor {
+  id                    String   @id @default(cuid())
+  name                  String
+  email                 String   @unique @db.VarChar(320)
+  passwordHash          String
+  phone                 String?  @db.VarChar(64)
+  licenseNumbers        String?  @db.Text
+  totpSecretEncrypted   String?  @db.LongText
+  recoveryCodeHashes    String?  @db.LongText
+  totpEnabledAt         DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  sessions              AdvisorSession[]
+  challenges            AuthChallenge[]
+  passwordResetTokens   PasswordResetToken[]
+  clients               Client[]
+  auditLogs             AuditLog[]
+  outbox                EmailOutbox[]
+  uploads               Upload[]
+}
+
+model AdvisorSession {
+  id          String   @id @default(cuid())
+  advisorId   String
+  tokenHash   String   @unique @db.Char(64)
+  csrfToken   String   @db.Char(64)
+  createdAt   DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  advisor     Advisor  @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  @@index([advisorId, lastSeenAt])
+}
+
+model AuthChallenge {
+  id          String   @id @default(cuid())
+  advisorId   String
+  tokenHash   String   @unique @db.Char(64)
+  csrfToken   String   @db.Char(64)
+  encryptedEnrollmentSecret String? @db.LongText
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  createdAt   DateTime @default(now())
+  advisor     Advisor  @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  @@index([advisorId, expiresAt])
+}
+
+model PasswordResetToken {
+  id          String   @id @default(cuid())
+  advisorId   String
+  tokenHash   String   @unique @db.Char(64)
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime @default(now())
+  advisor     Advisor  @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  @@index([advisorId, expiresAt])
+}
+
+model RateLimit {
+  id          String   @id @default(cuid())
+  scope       String   @db.VarChar(64)
+  keyHash     String   @db.Char(64)
+  count       Int      @default(0)
+  windowStart DateTime
+  blockedUntil DateTime?
+  updatedAt   DateTime @updatedAt
+  @@unique([scope, keyHash])
+}
+
+model IntakeDraft {
+  id               String   @id @default(cuid())
+  sessionTokenHash String   @unique @db.Char(64)
+  csrfToken        String   @db.Char(64)
+  encryptedData    String   @db.LongText
+  email            String?  @db.VarChar(320)
+  step             Int      @default(1)
+  revision         Int      @default(0)
+  submittedAt      DateTime?
+  consentedAt      DateTime?
+  consentVersion   String?  @db.VarChar(64)
+  clientId         String?  @unique
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  grants           DraftAccessGrant[]
+  upload           Upload?
+  client           Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  @@index([email, updatedAt])
+}
+
+model DraftAccessGrant {
+  id          String       @id @default(cuid())
+  draftId     String
+  tokenHash   String       @unique @db.Char(64)
+  purpose     GrantPurpose @default(RESUME)
+  expiresAt   DateTime
+  usedAt      DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime     @default(now())
+  draft       IntakeDraft  @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  @@index([draftId, expiresAt])
+}
+
+model Client {
+  id             String       @id @default(cuid())
+  advisorId      String
+  status         ClientStatus @default(NEW)
+  firstName      String       @db.VarChar(120)
+  lastName       String       @db.VarChar(120)
+  email          String       @db.VarChar(320)
+  encryptedData  String       @db.LongText
+  revision       Int          @default(1)
+  submittedAt    DateTime     @default(now())
+  nextReviewDate DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  advisor        Advisor      @relation(fields: [advisorId], references: [id], onDelete: Restrict)
+  persons        Person[]
+  accounts       Account[]
+  incomeStreams  IncomeStream[]
+  expenses       Expense[]
+  goals          Goal[]
+  debts          Debt[]
+  estateDocs     EstateDocs?
+  riskProfile    RiskProfile?
+  consent        ConsentRecord?
+  upload         Upload?
+  scenarios      Scenario[]
+  recommendations Recommendation[]
+  reports        Report[]
+  notes          Note[]
+  tasks          FollowUpTask[]
+  auditLogs      AuditLog[]
+  drafts         IntakeDraft?
+  @@index([advisorId, status, submittedAt])
+  @@index([advisorId, updatedAt])
+  @@index([advisorId, email])
+}
+
+model Person {
+  id             String     @id @default(cuid())
+  clientId       String
+  role           PersonRole
+  firstName      String     @db.VarChar(120)
+  lastName       String     @db.VarChar(120)
+  dob            DateTime?
+  retirementAge  Int?
+  earnedIncomeCents BigInt?
+  piaCents       BigInt?
+  employeeContributionPct Decimal? @db.Decimal(7, 4)
+  employerMatchPct Decimal? @db.Decimal(7, 4)
+  client         Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  @@unique([clientId, role])
+}
+
+model Account {
+  id                     String       @id @default(cuid())
+  clientId               String
+  owner                  AccountOwner @default(HOUSEHOLD)
+  type                   AccountType
+  balanceCents           BigInt
+  costBasisCents         BigInt?
+  annualContributionCents BigInt?
+  employerMatchPct       Decimal?     @db.Decimal(7, 4)
+  client                 Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  @@index([clientId, type])
+}
+
+model IncomeStream {
+  id             String     @id @default(cuid())
+  clientId       String
+  personRole     PersonRole?
+  type           IncomeType
+  monthlyCents   BigInt?
+  annualCents    BigInt?
+  isColaLinked   Boolean?
+  startAge       Int?
+  endAge         Int?
+  colaPct        Decimal?   @db.Decimal(7, 4)
+  survivorPct    Decimal?   @db.Decimal(7, 4)
+  client         Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  @@index([clientId, type])
+}
+
+model Expense {
+  id             String   @id @default(cuid())
+  clientId       String
+  kind           String   @db.VarChar(64)
+  amountCents    BigInt?
+  isEssential    Boolean?
+  client         Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  @@index([clientId, kind])
+}
+
+model Goal {
+  id             String   @id @default(cuid())
+  clientId       String
+  label          String   @db.VarChar(200)
+  amountCents    BigInt?
+  targetYear     Int?
+  client         Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+model Debt {
+  id             String   @id @default(cuid())
+  clientId       String
+  label          String   @db.VarChar(200)
+  balanceCents   BigInt?
+  ratePct        Decimal? @db.Decimal(7, 4)
+  monthlyPaymentCents BigInt?
+  payoffYear     Int?
+  client         Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+model EstateDocs {
+  id             String   @id @default(cuid())
+  clientId       String   @unique
+  willStatus     String?  @db.VarChar(16)
+  trustStatus    String?  @db.VarChar(16)
+  financialPoaStatus String? @db.VarChar(16)
+  healthcareDirectiveStatus String? @db.VarChar(16)
+  beneficiariesStatus String? @db.VarChar(16)
+  beneficiariesUpdatedYear Int?
+  client         Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+model RiskProfile {
+  id             String   @id @default(cuid())
+  clientId       String   @unique
+  score          Int
+  profile        String   @db.VarChar(32)
+  answers        String   @db.Text
+  client         Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+model ConsentRecord {
+  id             String   @id @default(cuid())
+  clientId       String   @unique
+  version        String   @db.VarChar(64)
+  consentedAt    DateTime
+  client         Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+model Upload {
+  id             String   @id @default(cuid())
+  draftId        String?  @unique
+  clientId       String?  @unique
+  advisorId      String?
+  name           String   @db.VarChar(180)
+  mimeType       String   @db.VarChar(100)
+  size           Int
+  encryptedBytes Bytes    @db.LongBlob
+  createdAt      DateTime @default(now())
+  draft          IntakeDraft? @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  client         Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  advisor        Advisor? @relation(fields: [advisorId], references: [id], onDelete: SetNull)
+  @@index([advisorId, createdAt])
+}
+
+model EmailOutbox {
+  id               String       @id @default(cuid())
+  advisorId        String?
+  kind             String       @db.VarChar(64)
+  recipientHash    String       @db.Char(64)
+  encryptedPayload String       @db.LongText
+  status           OutboxStatus @default(PENDING)
+  attempts         Int          @default(0)
+  nextAttemptAt    DateTime     @default(now())
+  lastErrorCode    String?      @db.VarChar(80)
+  sentAt           DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  advisor          Advisor?     @relation(fields: [advisorId], references: [id], onDelete: SetNull)
+  @@index([status, nextAttemptAt])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  advisorId   String?
+  clientId    String?
+  action      String   @db.VarChar(100)
+  entity      String   @db.VarChar(80)
+  entityId    String   @db.VarChar(80)
+  summary     String?  @db.VarChar(500)
+  createdAt   DateTime @default(now())
+  advisor     Advisor? @relation(fields: [advisorId], references: [id], onDelete: SetNull)
+  client      Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  @@index([clientId, createdAt])
+}
+
+// Later-phase records exist only as protected data-model placeholders; Phase 1 exposes no actions for them.
+model Scenario {
+  id              String         @id @default(cuid())
+  clientId        String
+  name            String         @db.VarChar(180)
+  encryptedOverrides String      @db.LongText
+  isBase          Boolean        @default(false)
+  status          ScenarioStatus @default(DRAFT)
+  createdAt       DateTime       @default(now())
+  client          Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  analysisResults AnalysisResult[]
+}
+model AnalysisResult {
+  id              String   @id @default(cuid())
+  scenarioId      String
+  engineVersion   String   @db.VarChar(64)
+  assumptionsYear Int
+  encryptedSnapshot String @db.LongText
+  createdAt       DateTime @default(now())
+  scenario        Scenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  reports         Report[]
+}
+model Recommendation {
+  id              String               @id @default(cuid())
+  clientId        String
+  ruleId          String?              @db.VarChar(32)
+  priority        String               @db.VarChar(16)
+  category        String               @db.VarChar(64)
+  encryptedContent String              @db.LongText
+  status          RecommendationStatus @default(PROPOSED)
+  sortOrder       Int                  @default(0)
+  client          Client               @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+model Report {
+  id              String   @id @default(cuid())
+  clientId        String
+  analysisResultId String?
+  version         Int
+  encryptedSnapshot String @db.LongText
+  checksum        String?  @db.Char(64)
+  generatedAt     DateTime @default(now())
+  sentAt          DateTime?
+  client          Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  analysisResult  AnalysisResult? @relation(fields: [analysisResultId], references: [id], onDelete: SetNull)
+  @@unique([clientId, version])
+}
+model Note {
+  id              String   @id @default(cuid())
+  clientId        String
+  encryptedBody   String   @db.LongText
+  createdAt       DateTime @default(now())
+  client          Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+model FollowUpTask {
+  id              String   @id @default(cuid())
+  clientId        String
+  encryptedContent String  @db.LongText
+  dueAt           DateTime?
+  completedAt     DateTime?
+  client          Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+model AssumptionYear {
+  id              String   @id @default(cuid())
+  year            Int
+  key             String   @db.VarChar(120)
+  encryptedValue  String   @db.LongText
+  sourceUrl       String?  @db.VarChar(2048)
+  verifiedAt      DateTime?
+  @@unique([year, key])
+}

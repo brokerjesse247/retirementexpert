@@ -1,0 +1,14 @@
+import Link from 'next/link';
+import { ShieldCheck } from 'lucide-react';
+export default function Privacy() {
+  return <article className="page-shell prose-page"><span className="eyebrow"><ShieldCheck size={16} /> PRIVACY NOTICE · VERSION 2026-10-20</span><h1>Your information,<br /><span className="blue">handled with care.</span></h1>
+    <div className="notice"><strong>Development-stage notice.</strong> This workspace is being prepared for launch. Until LSRT approves production privacy, retention, storage and backup arrangements, use fictional test information only. Do not upload real statements in this development workspace.</div>
+    <h2>What the intake collects</h2><p>The questionnaire asks for your contact information, birth date, household situation, retirement goals, approximate income and savings, expenses, Social Security benefit estimates, health/protection answers and estate-document status. These details are used to prepare an advisor-reviewed retirement-planning profile and contact you about it.</p>
+    <h2>What you should never provide</h2><p>Do not provide Social Security numbers, account numbers, passwords or login credentials. An optional SSA statement must be a PDF with sensitive identifiers redacted. Uploading a statement is not required to complete the form.</p>
+    <h2>Saving and returning</h2><p>Your answers are saved on the server through a restricted intake session. A requested resume link is sent only to the email address saved with your draft. That link is an access credential: do not forward it. It expires and is replaced by a restricted session when used. Nothing sensitive is intentionally stored in your browser’s local storage.</p>
+    <h2>Who can access your profile</h2><p>The LSRT advisor assigned to your profile can review and edit it after submission. Advisor access requires a verified account and two-factor authentication. Financial draft/profile content and optional uploads are encrypted at the application layer. Email and hosting service providers process information needed for delivery and operation. Uploaded documents are not automatically sent to AI services.</p>
+    <h2>Retention and your requests</h2><p>Contact your LSRT advisor to request access, correction or deletion. Some records may need to be retained for legal or regulatory reasons. A production retention schedule—including reports, uploads, backups and legal holds—must be approved before launch. This development notice does not promise a completed production retention or backup policy.</p>
+    <h2>Planning is not a guarantee</h2><p>This workflow is educational and illustrative. LSRT Insurance does not provide tax or legal advice. Consult a qualified tax professional or attorney. Calculations and reports are not yet available in this foundation release.</p>
+    <Link href="/intake" className="button button-primary">Continue to the questionnaire</Link>
+  </article>;
+}

@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>LSRT Insurance — Retirement Platform Build Specification</title>
+<style>
+@page { size: Letter; margin: 0.85in 0.75in 0.8in 0.75in;
+  @top-left { content: "LSRT Insurance · Retirement Planning Platform — Build Specification"; font: 8pt 'DejaVu Sans'; color: #1B3A6B; }
+  @top-right { content: "v1.0 · October 2026"; font: 8pt 'DejaVu Sans'; color: #8a8f99; }
+  @bottom-left { content: "Confidential — prepared for the developer (Manus)"; font: 7.5pt 'DejaVu Sans'; color: #8a8f99; }
+  @bottom-right { content: "Page " counter(page) " of " counter(pages); font: 7.5pt 'DejaVu Sans'; color: #1B3A6B; } }
+@page cover { margin: 0; @top-left{content:none} @top-right{content:none} @bottom-left{content:none} @bottom-right{content:none} }
+body { font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 9.6pt; line-height: 1.5; color: #1f2733; }
+.cover { page: cover; height: 10.95in; overflow: hidden; background: #1B3A6B; color: #fff; padding: 1.4in 0.9in 0 0.9in; box-sizing: border-box; page-break-after: always; }
+.cover .bar { width: 90px; height: 6px; background: #C9A84C; margin-bottom: 28px; }
+.cover h1 { font-size: 30pt; line-height: 1.15; margin: 0 0 14px; color: #fff; page-break-before: auto; border: none; padding: 0; }
+.cover .sub { font-size: 14pt; color: #C9A84C; margin-bottom: 40px; }
+.cover p { font-size: 10.5pt; color: #dfe6f2; max-width: 5.6in; }
+.cover .meta { margin-top: 2.2in; font-size: 9pt; color: #b9c6dc; border-top: 1px solid #3c5a8c; padding-top: 14px; }
+h1 { font-size: 18pt; color: #1B3A6B; border-bottom: 3px solid #C9A84C; padding-bottom: 6px; margin: 0 0 14px; page-break-before: always; }
+h1.first { page-break-before: auto; }
+h2 { font-size: 12.5pt; color: #1B3A6B; margin: 20px 0 8px; }
+h3 { font-size: 10.5pt; color: #2b4f8a; margin: 14px 0 6px; }
+table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 8.6pt; page-break-inside: auto; }
+th { background: #1B3A6B; color: #fff; text-align: left; padding: 5px 7px; font-weight: bold; }
+td { border-bottom: 1px solid #dde2ea; padding: 5px 7px; vertical-align: top; }
+tr:nth-child(even) td { background: #f6f8fb; }
+tr { page-break-inside: avoid; }
+code, .mono { font-family: 'DejaVu Sans Mono', monospace; font-size: 8.3pt; background: #f1f3f7; padding: 1px 3px; border-radius: 2px; }
+pre { font-family: 'DejaVu Sans Mono', monospace; font-size: 7.9pt; background: #f4f6fa; border-left: 3px solid #1B3A6B; padding: 9px 11px; white-space: pre-wrap; line-height: 1.42; page-break-inside: avoid; }
+.box { border: 1px solid #e3d3a0; background: #fbf7ea; border-left: 4px solid #C9A84C; padding: 9px 12px; margin: 10px 0 14px; page-break-inside: avoid; }
+.note { border-left: 4px solid #1B3A6B; background: #eef2f9; padding: 9px 12px; margin: 10px 0 14px; page-break-inside: avoid; }
+.warn { border-left: 4px solid #b4442f; background: #fbeeeb; padding: 9px 12px; margin: 10px 0 14px; page-break-inside: avoid; }
+.toc a { color: #1f2733; text-decoration: none; }
+.toc li { margin: 3px 0; }
+.toc a::after { content: leader('.') target-counter(attr(href), page); color: #1B3A6B; }
+ul, ol { margin: 4px 0 10px 0; padding-left: 20px; }
+li { margin: 2px 0; }
+.tag { display: inline-block; font-size: 7.5pt; padding: 1px 6px; border-radius: 8px; background: #1B3A6B; color: #fff; }
+.tag.gold { background: #C9A84C; color: #1B3A6B; }
+.small { font-size: 8.2pt; color: #5a6270; }
+</style></head><body>
+
+<section class="cover">
+  <div class="bar"></div>
+  <h1>Retirement Planning &amp; Client Report Platform</h1>
+  <div class="sub">Complete Build Specification for LSRT Insurance</div>
+  <p>This document tells the developer (Manus) exactly what to build: a web platform where clients fill out an online intake form, the advisor reviews their information in a private dashboard, and the system produces a branded, multi-page PDF retirement report. The report covers Social Security, retirement income, Monte Carlo analysis, taxes, Roth conversions, RMDs, Medicare, long-term care, asset allocation, estate planning, and personalized recommendations.</p>
+  <p>Every screen, data field, formula, rule, report page, and acceptance test is listed below, so the result is accurate, defensible, and professional.</p>
+  <div class="meta">Prepared for: LSRT Insurance (solo advisor) &nbsp;·&nbsp; Brand: Navy #1B3A6B / Gold #C9A84C &nbsp;·&nbsp; Tagline: “Your Retirement, Expertly Planned”<br>Version 1.0 · October 2026 · Reference inspiration: retirementexpert.ai</div>
+</section>
+
+<h1 class="first">Contents</h1>
+<ol class="toc">
+<li><a href="#s1">How to use this document with Manus</a></li>
+<li><a href="#s2">Product overview, users &amp; goals</a></li>
+<li><a href="#s3">Technical requirements</a></li>
+<li><a href="#s4">Pages, screens &amp; user flows</a></li>
+<li><a href="#s5">Client intake form — every field</a></li>
+<li><a href="#s6">Database / data model</a></li>
+<li><a href="#s7">Planning assumptions &amp; annual tax/limit table</a></li>
+<li><a href="#s8">Calculation engine — formulas by module</a></li>
+<li><a href="#s9">Recommendation engine — rules</a></li>
+<li><a href="#s10">AI narrative layer (with guardrails)</a></li>
+<li><a href="#s11">PDF report — page-by-page specification</a></li>
+<li><a href="#s12">Advisor dashboard features</a></li>
+<li><a href="#s13">Compliance, privacy &amp; security</a></li>
+<li><a href="#s14">Build phases &amp; acceptance tests</a></li>
+<li><a href="#s15">Recommended upgrades (Phase 2 &amp; 3)</a></li>
+<li><a href="#s16">Glossary of retirement terms (for the report appendix)</a></li>
+<li><a href="#s17">Master prompt to paste into Manus</a></li>
+</ol>
+
+<h1 id="s1">1. How to use this document with Manus</h1>
+<p>Give Manus this entire PDF, then paste the <b>Master Prompt</b> from Section 17. Build in the phases from Section 14. Do <b>not</b> ask for everything in one request: a phased build is easier to check and gives far more accurate calculations.</p>
+<table>
+<tr><th style="width:18%">Step</th><th>What you do</th><th style="width:30%">What “done” looks like</th></tr>
+<tr><td><b>1. Kick-off</b></td><td>Upload this PDF to Manus and paste the Master Prompt. Ask Manus to confirm its plan, tech choices, and phase list before it writes code.</td><td>Manus repeats back the phases and confirms it will follow the formulas exactly.</td></tr>
+<tr><td><b>2. Phase 1</b></td><td>Foundation: login, database, intake form, dashboard.</td><td>You can submit a test intake and see it in your dashboard.</td></tr>
+<tr><td><b>3. Phase 2</b></td><td>Calculation engine + automated tests using the sample client in Section 14.</td><td>Every acceptance test passes with the expected numbers.</td></tr>
+<tr><td><b>4. Phase 3</b></td><td>PDF report generation with your branding.</td><td>One click produces a 15–20 page branded PDF.</td></tr>
+<tr><td><b>5. Phase 4</b></td><td>Recommendations, AI narrative, advisor notes, scenario comparison.</td><td>You can edit or approve every recommendation before the PDF goes out.</td></tr>
+<tr><td><b>6. Launch</b></td><td>Compliance review (Section 13), real-domain deployment, update the tax table for the current year.</td><td>Your compliance contact has approved the disclaimers and report language.</td></tr>
+</table>
+<div class="box"><b>The one rule to repeat to Manus:</b> “All tax numbers, contribution limits, Medicare premiums and Social Security figures must come from the editable Assumptions Table (Section 7), never from numbers hard-coded in the formulas. Every calculation must have an automated test that matches the expected values in Section 14.”</div>
+
+<h1 id="s2">2. Product overview, users &amp; goals</h1>
+<h2>2.1 What the platform does</h2>
+<ol>
+<li>A prospect or client opens your public link and fills out a guided, multi-step <b>intake questionnaire</b>. It saves as they go, so they can stop and return.</li>
+<li>You get an email alert. The client appears in your <b>advisor dashboard</b> with the status “New”.</li>
+<li>You open the client, check and correct their data, add advisor notes, and optionally adjust assumptions (returns, inflation, retirement age).</li>
+<li>The <b>calculation engine</b> runs every module: Social Security, income, Monte Carlo, tax, Roth, RMD, Medicare, LTC, allocation, estate, and insurance gaps.</li>
+<li>The <b>recommendation engine</b> proposes prioritized action items. You approve, edit, or remove each one.</li>
+<li>You click <b>Generate Report</b>. The system builds a branded PDF and saves it to the client record. You download it or send it to the client.</li>
+<li>You track each client through: New → In Review → Report Generated → Presented → Implementing → Annual Review Due.</li>
+</ol>
+<h2>2.2 Users</h2>
+<table>
+<tr><th style="width:20%">Role</th><th>Access</th></tr>
+<tr><td><b>Advisor (you)</b></td><td>Full access: dashboard, all clients, assumptions table, report generation, settings, branding. Phase 1 has one advisor account; the data model should allow more advisors later.</td></tr>
+<tr><td><b>Client / prospect</b></td><td>Public intake form only. No login needed for v1. Optional Phase 2: a client portal to download their own reports.</td></tr>
+</table>
+<h2>2.3 Goals for an outstanding advisor tool</h2>
+<ul>
+<li><b>Accurate:</b> formulas follow official SSA, IRS and CMS rules (Section 8), not rough rules of thumb.</li>
+<li><b>Personal:</b> every recommendation cites the client’s own numbers, for example “Delaying to 70 adds $X over your lifetime if you live to 90.”</li>
+<li><b>Actionable:</b> each recommendation has a priority, a dollar impact, and a clear next step, including the insurance or annuity solution LSRT can provide where one fits.</li>
+<li><b>Advisor-controlled:</b> nothing reaches the client until you approve it.</li>
+<li><b>Compliant:</b> clear disclaimers, stated assumptions, and a saved audit copy of every report sent.</li>
+</ul>
+
+<h1 id="s3">3. Technical requirements</h1>
+<p>Manus can choose the exact technology, but the build must meet these requirements. A modern web stack such as Next.js + PostgreSQL + Prisma works well.</p>
+<table>
+<tr><th style="width:24%">Area</th><th>Requirement</th></tr>
+<tr><td>Hosting</td><td>Online web app on a custom domain (for example, plan.lsrtinsurance.com) with HTTPS. It must work well on phones, because many clients will fill the form on a phone.</td></tr>
+<tr><td>Database</td><td>A relational database (PostgreSQL recommended) with daily backups.</td></tr>
+<tr><td>Authentication</td><td>Email + password advisor login with hashed passwords (bcrypt/argon2), password reset, and session timeout. Two-factor authentication is strongly recommended.</td></tr>
+<tr><td>PDF generation</td><td>Server-side HTML-to-PDF with a headless browser (for example Playwright/Chromium). Charts are rendered as SVG so they stay sharp. Use page breaks and a branded header and footer on every page.</td></tr>
+<tr><td>Charts</td><td>An SVG chart library (Recharts, Chart.js-to-SVG, or hand-built SVG) that renders both on screen and inside the PDF.</td></tr>
+<tr><td>File storage</td><td>Cloud storage (for example S3) for generated PDFs and optional client uploads such as an SSA statement. Use private links that expire.</td></tr>
+<tr><td>Email</td><td>Transactional email for “new intake submitted” alerts to you and a “thank you” confirmation to the client.</td></tr>
+<tr><td>AI (optional, Phase 4)</td><td>An LLM API used <i>only</i> to turn calculated results into plain-English narrative, under the guardrails in Section 10. The AI never calculates numbers.</td></tr>
+<tr><td>Calculation engine</td><td>One pure module with no database or network calls (for example <code>lib/calculations/</code>). Each module is its own function with unit tests. Use a seeded random-number generator for Monte Carlo so results can be reproduced.</td></tr>
+<tr><td>Assumptions</td><td>All yearly figures (tax brackets, limits, premiums, SS figures) are stored in a database table keyed by year and editable from an advisor Settings screen.</td></tr>
+</table>
+
+<h1 id="s4">4. Pages, screens &amp; user flows</h1>
+<table>
+<tr><th style="width:24%">Page / route</th><th style="width:12%">Access</th><th>Contents</th></tr>
+<tr><td><b>Landing</b> <code>/</code></td><td>Public</td><td>LSRT branding, tagline, a 3-step “How it works” section, what the client receives (sample report pages), a trust/privacy statement, and a “Start My Retirement Plan” button. Include an advisor login link in the footer.</td></tr>
+<tr><td><b>Intake</b> <code>/intake</code></td><td>Public</td><td>An 8-step questionnaire (Section 5) with a progress bar, field validation, plain-language help tips (ⓘ), autosave, and a “Save &amp; continue later” option that emails a resume link.</td></tr>
+<tr><td><b>Confirmation</b> <code>/intake/thank-you</code></td><td>Public</td><td>Thank-you message, what happens next, and an optional booking link (Calendly).</td></tr>
+<tr><td><b>Advisor login</b> <code>/login</code></td><td>Public</td><td>Email/password login, forgot password, LSRT branding.</td></tr>
+<tr><td><b>Dashboard</b> <code>/dashboard</code></td><td>Advisor</td><td>KPI cards (new intakes, reports this month, reviews due), and a client table with search, status filter, sort, and quick actions (Section 12).</td></tr>
+<tr><td><b>Client workspace</b> <code>/dashboard/clients/[id]</code></td><td>Advisor</td><td>Tabs: <i>Profile</i> (editable intake data), <i>Analysis</i> (live results and charts for every module), <i>Scenarios</i> (side-by-side what-ifs), <i>Recommendations</i> (approve/edit), <i>Notes</i>, and <i>Reports</i> (history and downloads).</td></tr>
+<tr><td><b>Settings</b> <code>/dashboard/settings</code></td><td>Advisor</td><td>Advisor profile and signature, logo upload, report cover text, disclosures text, default assumptions, and the yearly Assumptions Table editor.</td></tr>
+</table>
+<h2>4.1 Key flow: from intake to delivered report</h2>
+<pre>Client: Landing → Intake steps 1–8 → Review → Submit → Thank-you
+   ↓  (email alert to advisor; status = NEW)
+Advisor: Dashboard → open client → verify/correct data → status = IN_REVIEW
+   → Analysis tab (engine runs live) → Scenarios (optional)
+   → Recommendations: approve / edit / add custom
+   → Generate Report → PDF saved (version N) → status = REPORT_GENERATED
+   → Download / email to client → status = PRESENTED
+   → (12 months later) status = ANNUAL_REVIEW_DUE, reminder email to advisor</pre>
+<h1 id="s5">5. Client intake form — every field</h1>
+<p>The form is divided into 8 short steps. Required fields are marked <b>*</b>. Dollar fields accept whole numbers and format with commas. Show a short ⓘ tip on every financial field (for example, “Find this on your latest 401(k) statement”). Spouse fields only appear when the marital status is Married.</p>
+
+<h3>Step 1 — About you</h3>
+<table><tr><th style="width:30%">Field</th><th style="width:18%">Type</th><th>Notes / validation</th></tr>
+<tr><td>First name*, Last name*</td><td>text</td><td></td></tr>
+<tr><td>Email*, Phone*</td><td>email / tel</td><td>Valid formats</td></tr>
+<tr><td>Date of birth*</td><td>date</td><td>Age 18–90</td></tr>
+<tr><td>State of residence*</td><td>select</td><td>Used for state tax notes and state estate/inheritance tax flags</td></tr>
+<tr><td>Marital status*</td><td>select</td><td>Single / Married / Divorced / Widowed</td></tr>
+<tr><td>Tax filing status*</td><td>select</td><td>Single / Married Filing Jointly / Married Filing Separately / Head of Household (pre-select from marital status)</td></tr>
+<tr><td>Spouse first/last name, DOB</td><td>text / date</td><td>Required if married</td></tr>
+<tr><td>Number of dependents; any dependents with special needs?</td><td>number / yes-no</td><td>The special-needs answer triggers the special needs trust recommendation</td></tr>
+<tr><td>Employment status (you / spouse)</td><td>select</td><td>Employed / Self-employed / Retired / Not working</td></tr>
+</table>
+
+<h3>Step 2 — Income</h3>
+<table><tr><th style="width:30%">Field</th><th style="width:18%">Type</th><th>Notes</th></tr>
+<tr><td>Annual gross earned income* (you / spouse)</td><td>$</td><td></td></tr>
+<tr><td>Expected pension at retirement (monthly), start age, survivor % (you / spouse)</td><td>$ / age / %</td><td>Survivor options: 0, 50, 75, 100%</td></tr>
+<tr><td>Pension cost-of-living adjustment?</td><td>yes/no</td><td></td></tr>
+<tr><td>Existing annuity income (monthly), start age</td><td>$ / age</td><td></td></tr>
+<tr><td>Rental / other income in retirement (monthly) and end age</td><td>$ / age</td><td></td></tr>
+<tr><td>Plan to work part-time in retirement? Income and until what age</td><td>$ / age</td><td>Used for the Social Security earnings-test warning</td></tr>
+</table>
+
+<h3>Step 3 — Savings &amp; investments (by tax type)</h3>
+<table><tr><th style="width:30%">Field</th><th style="width:18%">Type</th><th>Tax bucket</th></tr>
+<tr><td>401(k)/403(b)/457/TSP — pre-tax balance (you / spouse)</td><td>$</td><td>Tax-deferred</td></tr>
+<tr><td>Roth 401(k) balance</td><td>$</td><td>Tax-free</td></tr>
+<tr><td>Traditional IRA / SEP / SIMPLE balance</td><td>$</td><td>Tax-deferred</td></tr>
+<tr><td>Roth IRA balance</td><td>$</td><td>Tax-free</td></tr>
+<tr><td>HSA balance</td><td>$</td><td>Tax-free (for medical costs)</td></tr>
+<tr><td>Brokerage / taxable investments and estimated cost basis</td><td>$</td><td>Taxable</td></tr>
+<tr><td>Cash / savings / CDs</td><td>$</td><td>Taxable (emergency fund)</td></tr>
+<tr><td>Fixed or indexed annuity cash value</td><td>$</td><td>Tax-deferred</td></tr>
+<tr><td>Cash value life insurance</td><td>$</td><td>Other</td></tr>
+<tr><td>Current yearly contributions: employee %, employer match %, IRA/Roth $</td><td>% / $</td><td>Used for growth projection and the “capture the full match” rule</td></tr>
+<tr><td>Approximate current mix: % stocks / bonds / cash (or “not sure”)</td><td>%</td><td>Used for allocation comparison</td></tr>
+</table>
+
+<h3>Step 4 — Expenses, home &amp; debts</h3>
+<table><tr><th style="width:30%">Field</th><th style="width:18%">Type</th><th>Notes</th></tr>
+<tr><td>Current monthly spending*</td><td>$</td><td></td></tr>
+<tr><td>Expected monthly spending in retirement* (today’s dollars)</td><td>$</td><td>Offer “Not sure — use 80% of current”</td></tr>
+<tr><td>Big one-time goals (item, amount, year): travel, home repair, car, wedding</td><td>repeatable rows</td><td></td></tr>
+<tr><td>Home value, mortgage balance, monthly payment, payoff year</td><td>$ / year</td><td></td></tr>
+<tr><td>Other debts (balance, rate, monthly payment)</td><td>repeatable rows</td><td>Flag any debt with an interest rate above 8%</td></tr>
+</table>
+
+<h3>Step 5 — Social Security</h3>
+<table><tr><th style="width:30%">Field</th><th style="width:18%">Type</th><th>Notes</th></tr>
+<tr><td>Estimated monthly benefit at Full Retirement Age* (you / spouse)</td><td>$</td><td>Tip: “Log in at ssa.gov/myaccount and use the amount shown at your full retirement age.” This is your PIA.</td></tr>
+<tr><td>Already receiving benefits? Amount and start age</td><td>yes/no / $</td><td></td></tr>
+<tr><td>Planned claiming age (or “advise me”)</td><td>62–70</td><td></td></tr>
+<tr><td>Upload SSA statement (optional)</td><td>file (PDF)</td><td>Stored privately</td></tr>
+<tr><td>Government pension from non-covered work?</td><td>yes/no</td><td>Informational only (WEP/GPO were repealed in January 2025)</td></tr>
+</table>
+
+<h3>Step 6 — Retirement goals</h3>
+<table><tr><th style="width:30%">Field</th><th style="width:18%">Type</th><th>Notes</th></tr>
+<tr><td>Desired retirement age* (you / spouse)</td><td>number</td><td>50–80</td></tr>
+<tr><td>Retirement lifestyle</td><td>select</td><td>Simple / Comfortable / Active-travel / Luxury</td></tr>
+<tr><td>Top concern (rank top 3)</td><td>rank</td><td>Running out of money / Taxes / Healthcare / Market crash / Leaving a legacy / Long-term care / Inflation</td></tr>
+<tr><td>Desired amount to leave heirs or charity</td><td>$</td><td></td></tr>
+<tr><td>Charitable giving each year</td><td>$</td><td>Triggers QCD / donor-advised fund rules</td></tr>
+</table>
+
+<h3>Step 7 — Health, insurance &amp; risk</h3>
+<table><tr><th style="width:30%">Field</th><th style="width:18%">Type</th><th>Notes</th></tr>
+<tr><td>Health status (you / spouse)</td><td>select</td><td>Excellent / Good / Fair / Poor</td></tr>
+<tr><td>Family longevity (parents lived past 85?)</td><td>yes/no</td><td>Used to set the planning age (90 / 95 / 100)</td></tr>
+<tr><td>Current health coverage; plan before Medicare</td><td>select</td><td>Employer / ACA / Retiree plan / COBRA / Spouse’s plan</td></tr>
+<tr><td>Life insurance: type, death benefit (you / spouse)</td><td>select / $</td><td>Term / Whole / Universal / IUL / Group</td></tr>
+<tr><td>Long-term care insurance? Daily benefit</td><td>yes/no / $</td><td></td></tr>
+<tr><td>Disability insurance? (if still working)</td><td>yes/no</td><td></td></tr>
+<tr><td>Risk questionnaire (5 questions, scored 1–5 each)</td><td>radio</td><td>Score 5–11 = Conservative, 12–18 = Moderate, 19–25 = Aggressive. Example question: “If your portfolio fell 20% in a year you would: sell all / sell some / hold / buy a little / buy more.”</td></tr>
+</table>
+
+<h3>Step 8 — Estate documents, consent &amp; review</h3>
+<table><tr><th style="width:30%">Field</th><th style="width:18%">Type</th><th>Notes</th></tr>
+<tr><td>Do you have: Will / Living trust / Financial POA / Healthcare directive / Updated beneficiaries (and year last updated)?</td><td>yes/no/unsure each</td><td>Drives the estate checklist</td></tr>
+<tr><td>Review screen</td><td>summary</td><td>All answers with “Edit” links for each step</td></tr>
+<tr><td>Consent checkbox*</td><td>checkbox</td><td>“I agree LSRT Insurance may use this information to prepare my retirement analysis and contact me. I understand this is not tax or legal advice.”</td></tr>
+</table>
+<div class="warn"><b>Never collect</b> Social Security numbers, account numbers, or passwords in the intake form.</div>
+
+<h1 id="s6">6. Database / data model</h1>
+<p>Suggested tables. Field names are guidance; Manus may adjust them. Store money as decimals or integer cents, never as floating-point numbers.</p>
+<table>
+<tr><th style="width:20%">Table</th><th>Key fields</th></tr>
+<tr><td><b>Advisor</b></td><td>id, name, email, passwordHash, phone, licenseNumbers, signatureImageUrl, logoUrl, createdAt</td></tr>
+<tr><td><b>Client</b></td><td>id, advisorId, status (enum: NEW, IN_REVIEW, REPORT_GENERATED, PRESENTED, IMPLEMENTING, ANNUAL_REVIEW_DUE, ARCHIVED), source, submittedAt, nextReviewDate, plus all personal fields from Step 1</td></tr>
+<tr><td><b>Person</b></td><td>id, clientId, role (PRIMARY / SPOUSE), dob, income, piaAtFRA (SS benefit at FRA), plannedClaimAge, retirementAge, healthStatus, pension fields, life/LTC/disability coverage</td></tr>
+<tr><td><b>Account</b></td><td>id, clientId, ownerRole, type (401K_PRETAX, ROTH_401K, TRAD_IRA, ROTH_IRA, HSA, BROKERAGE, CASH, ANNUITY, CASH_VALUE_LIFE), balance, costBasis, annualContribution, employerMatchPct</td></tr>
+<tr><td><b>IncomeStream</b></td><td>id, clientId, type (PENSION, ANNUITY, RENTAL, PART_TIME, OTHER), monthlyAmount, startAge, endAge, colaPct, survivorPct</td></tr>
+<tr><td><b>Expense / Goal / Debt</b></td><td>monthly spending (current and retirement), one-time goals (amount, year), debts (balance, rate, payment)</td></tr>
+<tr><td><b>EstateDocs</b></td><td>will, trust, financialPOA, healthcareDirective, beneficiariesUpdatedYear (yes/no/unsure each)</td></tr>
+<tr><td><b>RiskProfile</b></td><td>answers JSON, score, profile</td></tr>
+<tr><td><b>Scenario</b></td><td>id, clientId, name (“Base”, “Retire at 67”, “Delay SS to 70”), overrides JSON (any assumption or input), isBase</td></tr>
+<tr><td><b>AnalysisResult</b></td><td>id, scenarioId, engineVersion, assumptionsYear, inputsSnapshot JSON, results JSON, createdAt</td></tr>
+<tr><td><b>Recommendation</b></td><td>id, clientId, ruleId, priority (HIGH/MEDIUM/LOW), category, title, body, dollarImpact, status (PROPOSED/APPROVED/EDITED/REMOVED), advisorEditedText, sortOrder</td></tr>
+<tr><td><b>Report</b></td><td>id, clientId, version, pdfStoragePath, analysisResultId, generatedAt, sentAt (an immutable audit copy)</td></tr>
+<tr><td><b>Note</b></td><td>id, clientId, body, createdAt</td></tr>
+<tr><td><b>AssumptionYear</b></td><td>year, key, value (JSON), sourceUrl, verifiedAt — see Section 7</td></tr>
+<tr><td><b>AuditLog</b></td><td>who, action, entity, entityId, timestamp</td></tr>
+</table>
+
+<h1 id="s7">7. Planning assumptions &amp; annual tax/limit table</h1>
+<h2>7.1 Default planning assumptions (editable per client and scenario)</h2>
+<table>
+<tr><th style="width:42%">Assumption</th><th style="width:18%">Default</th><th>Notes</th></tr>
+<tr><td>General inflation</td><td>2.5%</td><td>Applied to expenses</td></tr>
+<tr><td>Healthcare inflation</td><td>5.0%</td><td>Applied to premiums and out-of-pocket costs</td></tr>
+<tr><td>Social Security COLA</td><td>2.5%</td><td></td></tr>
+<tr><td>Expected return — Conservative / Moderate / Aggressive</td><td>5.0% / 6.5% / 7.5%</td><td>Nominal yearly arithmetic mean</td></tr>
+<tr><td>Volatility (std. dev.) — Conservative / Moderate / Aggressive</td><td>7% / 11% / 15%</td><td>Used by Monte Carlo</td></tr>
+<tr><td>Planning age (life expectancy)</td><td>95 (100 if excellent health + family longevity; 90 if poor health)</td><td>Per person</td></tr>
+<tr><td>Monte Carlo runs</td><td>5,000</td><td>Seeded random-number generator</td></tr>
+<tr><td>Monte Carlo target</td><td>≥ 85% = On Track (green), 70–84% = Caution (amber), &lt; 70% = At Risk (red)</td><td></td></tr>
+<tr><td>Pre-Medicare health premium (per person per month)</td><td>$900</td><td>Advisor-editable; varies by state, age, and subsidy</td></tr>
+<tr><td>Medigap / Medicare Advantage + Part D premium (per person per month)</td><td>$250</td><td>Editable</td></tr>
+<tr><td>Out-of-pocket medical (per person per year, 65+)</td><td>$2,500</td><td>Editable</td></tr>
+<tr><td>Long-term care cost (per month), duration</td><td>$9,000, 3 years</td><td>Editable by state</td></tr>
+<tr><td>State income tax rate (flat estimate)</td><td>From state table</td><td>Editable</td></tr>
+</table>
+
+<h2>7.2 Assumptions Table — 2026 values (store in database, edit every January)</h2>
+<div class="note">Values marked ✓ were confirmed against IRS, Medicare, or tax-reference sources in October 2026. Values marked ⚠ are from memory and <b>must be checked against the listed official source before launch</b>. Each January, check and update the whole table from IRS.gov, SSA.gov, and Medicare.gov.</div>
+<table>
+<tr><th style="width:46%">Item</th><th style="width:30%">2026 value</th><th>Source</th></tr>
+<tr><td>Federal brackets — Married Filing Jointly ✓</td><td>10% ≤ 24,800; 12% ≤ 100,800; 22% ≤ 211,400; 24% ≤ 403,550; 32% ≤ 512,450; 35% ≤ 768,700; 37% above</td><td>IRS / Tax Foundation</td></tr>
+<tr><td>Federal brackets — Single ⚠</td><td>10% ≤ 12,400; 12% ≤ 50,400; 22% ≤ 105,700; 24% ≤ 201,775; 32% ≤ 256,225; 35% ≤ 640,600; 37% above</td><td>IRS Rev. Proc. for 2026</td></tr>
+<tr><td>Standard deduction ✓</td><td>MFJ $32,200 · Single $16,100 · HoH $24,150</td><td>IRS</td></tr>
+<tr><td>Additional standard deduction, age 65+ ⚠</td><td>Check the current amount (per person; higher for single filers)</td><td>IRS</td></tr>
+<tr><td>“Senior bonus” deduction, age 65+ (2025–2028) ⚠</td><td>$6,000 per person, phases out above MAGI $75k single / $150k joint</td><td>OBBBA 2025 / IRS</td></tr>
+<tr><td>Long-term capital gains 0% / 15% / 20% thresholds ⚠</td><td>Load the current-year thresholds</td><td>IRS</td></tr>
+<tr><td>401(k)/403(b)/457/TSP employee limit ✓</td><td>$24,500</td><td>IRS</td></tr>
+<tr><td>401(k) catch-up age 50+ ✓ / ages 60–63 ✓</td><td>$8,000 / $11,250</td><td>IRS</td></tr>
+<tr><td>IRA limit ✓ / IRA catch-up 50+ ✓</td><td>$7,500 / $1,100</td><td>IRS</td></tr>
+<tr><td>HSA limits (self / family / 55+ catch-up) ⚠</td><td>Load current values</td><td>IRS</td></tr>
+<tr><td>Medicare Part B standard premium ✓</td><td>$202.90 / month</td><td>CMS / Medicare.gov</td></tr>
+<tr><td>IRMAA tiers (based on MAGI from 2 years earlier) ✓</td><td>Single: ≤109k $202.90; ≤137k $284.10; ≤171k $405.80; ≤205k $527.50; &lt;500k $649.20; ≥500k $689.90. Joint: thresholds 218k / 274k / 342k / 410k / 750k. Part D surcharges: $0 / 14.50 / 37.50 / 60.40 / 83.30 / 91.00</td><td>CMS</td></tr>
+<tr><td>Federal estate exemption ✓ / annual gift exclusion ✓</td><td>$15,000,000 per person / $19,000 per recipient</td><td>IRS (OBBBA)</td></tr>
+<tr><td>SS earnings-test limits, taxable maximum, COLA ⚠</td><td>Load current values</td><td>SSA.gov</td></tr>
+<tr><td>Social Security taxation thresholds (fixed by law, not indexed)</td><td>Single 25,000 / 34,000 · MFJ 32,000 / 44,000</td><td>IRC §86</td></tr>
+<tr><td>RMD start age (SECURE 2.0)</td><td>73 if born 1951–1959; 75 if born 1960 or later</td><td>IRS</td></tr>
+<tr><td>QCD annual limit ⚠</td><td>Load current indexed value (age 70½+)</td><td>IRS</td></tr>
+</table>
+<h1 id="s8">8. Calculation engine — formulas by module</h1>
+<p>Each module is a pure function: <code>(inputs, assumptions) → results</code>. Every output in the report must trace back to one of these functions. Run the engine for each person (primary and spouse) and for the household. Projections are yearly, from the current age to the planning age.</p>
+
+<h2>8.1 Net worth &amp; balance sheet</h2>
+<pre>totalInvestable = sum(all Account balances)
+buckets: taxDeferred = 401k pre-tax + Trad IRA + annuity; taxFree = Roth 401k + Roth IRA + HSA;
+         taxable = brokerage + cash
+netWorth = totalInvestable + homeValue + cashValueLife − mortgage − otherDebts
+emergencyFundMonths = cash / currentMonthlySpending</pre>
+
+<h2>8.2 Social Security (use exact SSA rules)</h2>
+<h3>Full Retirement Age (FRA)</h3>
+<table><tr><th>Birth year</th><th>FRA</th></tr>
+<tr><td>1943–1954</td><td>66</td></tr><tr><td>1955</td><td>66 + 2 months</td></tr><tr><td>1956</td><td>66 + 4 months</td></tr><tr><td>1957</td><td>66 + 6 months</td></tr><tr><td>1958</td><td>66 + 8 months</td></tr><tr><td>1959</td><td>66 + 10 months</td></tr><tr><td>1960 and later</td><td>67</td></tr></table>
+<p class="small">People born on January 1 use the prior year. Use age in months for every claiming calculation.</p>
+<h3>Own (worker) benefit at any claim age</h3>
+<pre>m = months between claim age and FRA
+If claiming EARLY:   reduction = (5/9 of 1%) × min(m,36) + (5/12 of 1%) × max(m−36, 0)
+                     benefit = PIA × (1 − reduction)
+If claiming LATE:    credit = (2/3 of 1%) × m  (8% per year, stops at age 70)
+                     benefit = PIA × (1 + credit)
+Check (FRA 67, PIA $2,000): age 62 → $1,400 (70%); age 67 → $2,000; age 70 → $2,480 (124%)</pre>
+<h3>Spousal benefit</h3>
+<pre>Maximum spousal = 50% of the worker's PIA (at the spouse's FRA), and only once the worker has filed.
+If the spouse's own PIA &lt; 50% of the worker's PIA: excess = 50%×workerPIA − ownPIA
+Early spousal reduction: 25/36 of 1% per month for the first 36 months, then 5/12 of 1%
+(spousal benefits get NO delayed credits after FRA)
+Check: worker PIA $2,000, spouse own PIA $600, both at FRA → spouse gets $600 + $400 = $1,000</pre>
+<h3>Survivor benefit</h3>
+<p>When the first spouse dies, the survivor keeps the larger of the two benefits (including any delayed credits the deceased earned). Model this in the cash-flow projection at each spouse’s planning age, and show the “survivor income drop” as a dollar amount.</p>
+<h3>Claiming-strategy optimizer</h3>
+<ul>
+<li>Test every combination of claim ages 62–70 (in yearly steps; monthly steps are optional) for the primary and the spouse. That is 81 combinations for a couple.</li>
+<li>For each combination, calculate cumulative lifetime household benefits with COLA, including spousal and survivor benefits, to each planning age. Also show the present value at a 3% real discount rate.</li>
+<li>Report the best strategy, the planned strategy, and “claim both at 62”, with the dollar difference between them.</li>
+<li>Show cumulative-benefit curves for 62, FRA, and 70, plus the break-even ages.</li>
+</ul>
+<pre>Break-even (simple, no COLA): age where cumulative(later) ≥ cumulative(earlier)
+Check (PIA $2,000, FRA 67): 62 vs 67 → ~78.7 ; 67 vs 70 → ~82.5</pre>
+<h3>Earnings test and taxation</h3>
+<ul>
+<li>If the client claims before FRA and plans to keep working, apply the earnings-test limit ($1 withheld for every $2 over the limit; $1 for every $3 in the year FRA is reached). Show a warning.</li>
+<li>Taxable Social Security (provisional income method):</li>
+</ul>
+<pre>PI = other AGI + tax-exempt interest + 0.5 × SS
+MFJ (base1=32,000, base2=44,000, cap=6,000) | Single (25,000, 34,000, 4,500)
+if PI ≤ base1: taxable = 0
+elif PI ≤ base2: taxable = min(0.5×SS, 0.5×(PI − base1))
+else: taxable = min(0.85×SS, 0.85×(PI − base2) + min(0.5×SS, cap))</pre>
+
+<h2>8.3 Accumulation (until retirement)</h2>
+<pre>For each year until retirement, for each account:
+  balance = balance × (1 + expectedReturn) + employeeContribution + employerMatch
+  contributions are capped at the current-year limits (with catch-up by age)
+  salary grows by inflation (+ an optional raise %)</pre>
+
+<h2>8.4 Retirement cash-flow projection (core of the report)</h2>
+<p>Build a year-by-year table from retirement to the planning age with these columns: <i>Age(s), Spending need (inflated), Healthcare cost, One-time goals, Social Security, Pensions, Annuities, Other income, Portfolio withdrawal, Taxes, Ending balances by bucket</i>.</p>
+<pre>need_t = retirementSpending × (1+inflation)^(t) + healthcare_t + goals_t
+guaranteedIncome_t = SS_t + pensions_t + annuities_t + other_t
+gap_t = need_t − guaranteedIncome_t + taxes_t
+Withdrawal ORDER (default, tax-smart):
+  1) RMDs (forced)  2) taxable/cash  3) tax-deferred up to top of target bracket
+  4) Roth last (unless needed to avoid IRMAA/bracket jump)
+Iterate taxes and withdrawals until they converge (2–3 passes)
+Outputs: age money runs out (if any), ending legacy value, total lifetime taxes,
+         Income Coverage Ratio = guaranteedIncome / essential spending</pre>
+
+<h2>8.5 Monte Carlo simulation</h2>
+<pre>runs = 5,000 (seeded RNG)
+For each run, for each year from retirement to planning age:
+  r = random yearly return ~ Normal(mean, stdDev) (or lognormal; optionally a
+      fat-tailed bootstrap from historical returns in Phase 2)
+  portfolio = (portfolio − withdrawal_t) × (1 + r)
+  withdrawal_t comes from the cash-flow model (inflation-adjusted)
+  fail if portfolio ≤ 0 before planning age
+Outputs: probability of success %, median / 10th / 90th percentile ending balance,
+         "fan chart" of percentile bands by age, age of depletion in the worst 10%
+Also show a SEQUENCE-OF-RETURNS stress test: −25% in year 1 then average returns.</pre>
+
+<h2>8.6 Withdrawal strategies</h2>
+<ul>
+<li><b>4% rule:</b> first-year withdrawal = 4% × portfolio at retirement, then raised by inflation each year. Example: $1,000,000 → $40,000.</li>
+<li><b>Sustainable withdrawal rate:</b> solve for the highest starting rate that keeps Monte Carlo success at or above 85%.</li>
+<li><b>Guardrails (Guyton-Klinger style):</b> cut spending 10% if the withdrawal rate rises 20% above the start rate; raise it 10% if the rate falls 20% below.</li>
+<li><b>Bucket strategy:</b> Bucket 1 holds 2 years of gap in cash, Bucket 2 holds years 3–10 in bonds, Bucket 3 holds growth assets. Show the dollar amount for each bucket.</li>
+</ul>
+
+<h2>8.7 Taxes</h2>
+<pre>taxableIncome = wages + pension + annuity + taxable SS + IRA/401k withdrawals + Roth conversions
+                + ordinary investment income − standardDeduction(age 65+ additions) − senior deduction
+federalTax = progressive brackets by filing status (from the Assumptions Table)
+marginalRate = bracket containing the last dollar; effectiveRate = federalTax / gross income
+Check: MFJ 2026, gross $150,000, standard deduction → taxable $117,800 → tax $15,340, marginal 22%</pre>
+
+<h2>8.8 Roth conversion analysis</h2>
+<pre>Conversion window = years from retirement (or now) until RMD start age and SS start
+For each year in the window:
+  room = top of the target bracket (default 22% or 24%) − projected taxable income
+  also cap so MAGI stays below the next IRMAA threshold (watch age 63+ because of the 2-year look-back)
+  conversion_t = max(0, room), limited by the remaining pre-tax balance
+Compare "no conversion" vs "bracket-fill conversion": lifetime federal tax, RMD sizes,
+IRMAA years, after-tax value to heirs (assume heirs' tax rate 24%, editable).
+Recommend converting only if lifetime tax or after-tax legacy improves.</pre>
+
+<h2>8.9 Required Minimum Distributions</h2>
+<pre>RMD_age = prior Dec-31 tax-deferred balance / Uniform Lifetime factor(age)
+Factors: 73=26.5, 74=25.5, 75=24.6, 76=23.7, 77=22.9, 78=22.0, 79=21.1, 80=20.2,
+         81=19.4, 82=18.5, 83=17.7, 84=16.8, 85=16.0, 86=15.2, 87=14.4, 88=13.7,
+         89=12.9, 90=12.2, 91=11.5, 92=10.8, 93=10.1, 94=9.5, 95=8.9
+(Use the Joint Life table if the spouse beneficiary is more than 10 years younger.)
+Check: $500,000 at age 75 → $20,325; at 73 → $18,868
+Flag when RMDs push the client into a higher bracket or an IRMAA tier.</pre>
+
+<h2>8.10 Healthcare &amp; Medicare</h2>
+<pre>gapYears = max(0, 65 − retirementAge) per person → pre-Medicare cost = premium × 12 × gapYears (inflated)
+From 65: Part B (+IRMAA by projected MAGI 2 years earlier) + Part D (+IRMAA) + Medigap/MA + OOP
+Lifetime healthcare cost (today's $ and future $) per person and for the household
+HSA: show how many years of premiums the HSA covers</pre>
+<p>Also explain enrollment timing (the 7-month Initial Enrollment Period around age 65, late-enrollment penalties) and Medigap vs. Medicare Advantage in plain language.</p>
+
+<h2>8.11 Long-term care</h2>
+<pre>LTC risk cost = monthlyCost × 12 × years, inflated to age 85 at healthcare inflation
+Stress test: rerun the cash flow with an LTC event at 82 for 3 years; report the change in success % and legacy
+Coverage gap = projected cost − existing LTC benefit</pre>
+
+<h2>8.12 Asset allocation</h2>
+<ul>
+<li>Risk profile from the questionnaire score, then adjusted for time horizon and Income Coverage Ratio.</li>
+<li>Target equity %: Conservative 30–40, Moderate 50–60, Aggressive 70–80 (store these in settings).</li>
+<li>Glide path: reduce equities gradually from 10 years before retirement to a floor at retirement. Show a table every 5 years.</li>
+<li>Compare current vs. target and show the dollar amount to shift.</li>
+<li>Asset location tip: bonds in tax-deferred accounts, growth in Roth, tax-efficient index funds in taxable accounts.</li>
+</ul>
+
+<h2>8.13 Estate &amp; insurance</h2>
+<pre>Life insurance need (DIME / needs method):
+  need = debts + mortgage + (income replacement: survivor income gap × years) + education + final expenses (≈$15k)
+         − liquid assets − existing coverage
+Survivor income gap = household need after first death − survivor income (larger SS + survivor pension %)
+Estate tax flag: netWorth &gt; federal exemption (or a state threshold) → advise an attorney
+Checklist status from EstateDocs: Will, Revocable trust (recommend if &gt;$500k, real estate in
+multiple states, minor/special-needs heirs, or privacy concerns), POA, healthcare directive,
+beneficiaries updated in the last 3 years, TOD/POD designations, digital assets</pre>
+
+<h2>8.14 Retirement Readiness Score (0–100)</h2>
+<p>A single headline number for the cover page:</p>
+<pre>score = 40% × MonteCarloSuccess + 20% × min(IncomeCoverageRatio,1)×100
+      + 15% × taxDiversificationScore + 10% × emergencyFundScore
+      + 10% × insuranceProtectionScore + 5% × estateDocsScore
+85+ Excellent · 70–84 Good · 55–69 Needs Attention · &lt;55 At Risk</pre>
+<h1 id="s9">9. Recommendation engine — rules</h1>
+<p>Each rule has an ID, a trigger condition, a priority, a dollar impact (when it can be calculated), and a text template filled with the client’s numbers. The engine proposes rules, and <b>the advisor approves or edits each one</b>. Sort them by priority, then by dollar impact. Show the top 3 on the Executive Summary and all of them in the Action Plan.</p>
+<table>
+<tr><th style="width:7%">ID</th><th style="width:13%">Category</th><th style="width:30%">Trigger</th><th>Recommendation template (example)</th></tr>
+<tr><td>R01</td><td>Income</td><td>Monte Carlo &lt; 70%</td><td>HIGH — “Your plan has a {p}% chance of lasting to {age}. Retiring {n} years later, saving ${x}/mo more, or trimming spending by ${y}/mo raises it above 85%.” (solve for each lever)</td></tr>
+<tr><td>R02</td><td>Income</td><td>Income Coverage Ratio &lt; 1.0 for essential expenses</td><td>“Guaranteed income covers {c}% of essentials. A guaranteed lifetime income annuity of ${premium} could close the ${gap}/yr floor gap.” (LSRT solution)</td></tr>
+<tr><td>R03</td><td>Social Security</td><td>Optimal strategy beats planned strategy by &gt; $25k lifetime</td><td>“Claiming at {opt} instead of {plan} is projected to add ${diff} in lifetime benefits (to age {pa}).”</td></tr>
+<tr><td>R04</td><td>Social Security</td><td>Married and higher earner plans to claim before 70</td><td>“Delaying the higher earner to 70 raises the survivor benefit to ${s}/mo, protecting {spouse} for life.”</td></tr>
+<tr><td>R05</td><td>Social Security</td><td>Claiming before FRA while still working</td><td>“Earnings-test warning: about ${w} of benefits would be withheld in {year}.”</td></tr>
+<tr><td>R06</td><td>Tax</td><td>Roth conversion improves lifetime tax by &gt; $10k</td><td>“Convert about ${amt}/yr from {start} to {end}, filling the {b}% bracket. Projected lifetime tax savings: ${s}.”</td></tr>
+<tr><td>R07</td><td>Tax</td><td>Tax-free bucket &lt; 15%</td><td>“Only {t}% of savings is tax-free. Direct new savings to Roth to gain tax flexibility.”</td></tr>
+<tr><td>R08</td><td>Tax</td><td>Projected RMDs push into a higher bracket or IRMAA tier</td><td>“RMDs of ${r} at {age} would trigger IRMAA of ${i}/yr. Start reducing pre-tax balances now.”</td></tr>
+<tr><td>R09</td><td>Tax</td><td>Charitable giving &gt; 0 and age ≥ 70½</td><td>“Give via Qualified Charitable Distributions from your IRA. They count toward RMDs and are excluded from income.”</td></tr>
+<tr><td>R10</td><td>Savings</td><td>Employee contribution % &lt; employer match %</td><td>“You are leaving ${m}/yr of free employer match on the table.”</td></tr>
+<tr><td>R11</td><td>Savings</td><td>Age ≥ 50 (or 60–63) and not maxing contributions</td><td>“You are eligible for catch-up contributions of up to ${c}/yr.”</td></tr>
+<tr><td>R12</td><td>Savings</td><td>Emergency fund &lt; 6 months</td><td>“Build cash reserves to ${target} (6 months) before taking investment risk.”</td></tr>
+<tr><td>R13</td><td>Debt</td><td>Any debt with an interest rate &gt; 8%, or mortgage extends past retirement</td><td>“Paying off {debt} saves ${interest} in interest and lowers retirement spending by ${pmt}/mo.”</td></tr>
+<tr><td>R14</td><td>Healthcare</td><td>Retirement age &lt; 65</td><td>“{n} years before Medicare: budget about ${cost} for bridge coverage. Keep income low to qualify for ACA subsidies.”</td></tr>
+<tr><td>R15</td><td>Healthcare</td><td>HSA-eligible and HSA not maxed</td><td>“Max your HSA: it is triple tax-advantaged and covers Medicare premiums later.”</td></tr>
+<tr><td>R16</td><td>LTC</td><td>No LTC coverage and LTC stress test drops success by &gt; 10 points</td><td>“A 3-year care event drops your plan from {a}% to {b}%. Consider a hybrid life/LTC policy.” (LSRT solution)</td></tr>
+<tr><td>R17</td><td>Protection</td><td>Life insurance gap &gt; $50k, or survivor income drop &gt; 25%</td><td>“Your family would face a ${gap} gap. Term or permanent coverage of ${amt} closes it.” (LSRT solution)</td></tr>
+<tr><td>R18</td><td>Protection</td><td>Working, under 60, no disability coverage</td><td>“Your ability to earn is your largest asset. Review disability income insurance.”</td></tr>
+<tr><td>R19</td><td>Investments</td><td>|current equity % − target| &gt; 15 points</td><td>“Rebalance about ${amt} from {from} to {to} to match your {profile} profile.”</td></tr>
+<tr><td>R20</td><td>Investments</td><td>Within 5 years of retirement and equity &gt; 70%</td><td>“Sequence-of-returns risk: a −25% year now would cut your success rate to {s}%. Build a 2-year cash bucket.”</td></tr>
+<tr><td>R21</td><td>Estate</td><td>Any of Will / POA / Directive missing</td><td>“Missing documents: {list}. Meet with an estate attorney.”</td></tr>
+<tr><td>R22</td><td>Estate</td><td>Trust criteria met and no trust</td><td>“A revocable living trust can avoid probate on your ${x} estate.”</td></tr>
+<tr><td>R23</td><td>Estate</td><td>Beneficiaries not updated in more than 3 years, or “unsure”</td><td>“Review beneficiaries on every account and policy. They override your will.”</td></tr>
+<tr><td>R24</td><td>Legacy</td><td>Desired legacy &gt; projected median ending balance</td><td>“To leave ${goal}, consider a dedicated life insurance policy instead of underspending.” (LSRT solution)</td></tr>
+<tr><td>R25</td><td>Spending</td><td>Success ≥ 95% and legacy goal met</td><td>“You could spend about ${extra}/yr more and stay on track. Enjoy your retirement!”</td></tr>
+</table>
+<div class="note">Rules tagged “LSRT solution” should show an optional “How LSRT can help” line that you can turn on or off per report. The wording must stay educational, with no guarantees (see Section 13).</div>
+
+<h1 id="s10">10. AI narrative layer (with guardrails)</h1>
+<p>AI is optional, but it makes reports feel personal. Use it <b>only to write</b>, never to calculate.</p>
+<ul>
+<li><b>Input to the AI:</b> the calculated results JSON, the approved recommendations, and the client’s first name and top concerns. Never send SSNs or account numbers.</li>
+<li><b>Output:</b> (a) a 150–250-word executive summary letter from the advisor; (b) a 2–3 sentence plain-English explanation at the top of each report section.</li>
+<li><b>Guardrails in the prompt:</b> “Use ONLY numbers present in the JSON. Do not invent figures, products, returns, or guarantees. Do not give legal or tax advice; say ‘discuss with your tax professional’. Write at an 8th-grade reading level, in a warm and confident tone.”</li>
+<li><b>Validation:</b> after generation, extract every number from the AI text and check it exists in the results JSON. If any does not match, regenerate or fall back to the template text.</li>
+<li><b>Advisor review:</b> all AI text appears in an editable box. The PDF uses the advisor-approved version.</li>
+<li><b>On-screen helper (Phase 2):</b> an “Ask about this client” chat that answers advisor questions using the client’s results JSON.</li>
+</ul>
+
+<h1 id="s11">11. PDF report — page-by-page specification</h1>
+<p>Letter size, portrait. LSRT logo and navy header bar on every page; gold accent rules; footer with “Prepared by [Advisor], LSRT Insurance · [date] · Page X of Y” and a one-line disclaimer. Charts are SVG. Status colors: green #2E7D32, amber #C77700, red #B3261E. Typical length is 16–22 pages.</p>
+<table>
+<tr><th style="width:5%">#</th><th style="width:22%">Page</th><th>Contents</th></tr>
+<tr><td>1</td><td>Cover</td><td>Navy full-bleed page, LSRT logo, “Retirement Plan for [Client &amp; Spouse]”, date, advisor name and contact, tagline, and the large <b>Retirement Readiness Score</b> dial.</td></tr>
+<tr><td>2</td><td>Advisor letter + contents</td><td>Personal letter (AI or template, advisor-approved) and table of contents.</td></tr>
+<tr><td>3</td><td>Executive summary</td><td>Score, Monte Carlo %, retirement age, monthly income need vs. projected income, net worth, and top 3 actions with dollar impact. Uses a “traffic light” grid of 8 areas (Income, SS, Tax, Healthcare, LTC, Investments, Protection, Estate).</td></tr>
+<tr><td>4</td><td>Your information</td><td>Summary of the inputs and assumptions used, so the client can confirm accuracy.</td></tr>
+<tr><td>5</td><td>Net worth &amp; tax buckets</td><td>Balance sheet table, and a donut chart of taxable / tax-deferred / tax-free with a diversification score.</td></tr>
+<tr><td>6–7</td><td>Social Security</td><td>FRA, benefit at 62 / FRA / 70 for each spouse, cumulative-benefit line chart with break-even markers, optimizer result vs. planned (lifetime $ difference), survivor benefit, earnings-test and taxation notes.</td></tr>
+<tr><td>8–9</td><td>Retirement income plan</td><td>Stacked-area chart of income by source per year vs. spending need, a 5-year-step cash-flow table, Income Coverage Ratio, and the “income floor vs. flexible spending” explanation.</td></tr>
+<tr><td>10</td><td>Monte Carlo</td><td>Success % gauge, percentile fan chart, sequence-risk stress test, and the levers that improve the result.</td></tr>
+<tr><td>11</td><td>Withdrawal strategy</td><td>4% rule amount, sustainable rate, guardrails bands, bucket strategy amounts, withdrawal order.</td></tr>
+<tr><td>12–13</td><td>Tax plan</td><td>Current vs. retirement bracket, effective rate, lifetime tax projection, Roth conversion schedule table (year, amount, tax cost, bracket, IRMAA check), with/without comparison, contribution limits and catch-up eligibility.</td></tr>
+<tr><td>14</td><td>RMDs</td><td>RMD start age, RMD table by age (73/75 to 95), bracket and IRMAA flags, QCD note.</td></tr>
+<tr><td>15</td><td>Healthcare &amp; Medicare</td><td>Pre-Medicare gap cost, Medicare cost table by age including IRMAA, lifetime healthcare estimate, enrollment timeline graphic, Medigap vs. Advantage explainer, HSA strategy.</td></tr>
+<tr><td>16</td><td>Long-term care</td><td>Cost projection, stress test result, coverage gap, funding options (self-fund, traditional LTC, hybrid life/LTC, annuity with LTC rider).</td></tr>
+<tr><td>17</td><td>Investments</td><td>Current vs. target allocation bars, glide-path table, rebalancing amounts, asset location tips.</td></tr>
+<tr><td>18</td><td>Protection &amp; estate</td><td>Life insurance needs calculation, survivor income gap, estate checklist with ✓ / ✗ / ? status, beneficiary reminder, estate tax note.</td></tr>
+<tr><td>19–20</td><td>Action plan</td><td>All approved recommendations grouped by priority, each with a checkbox, a “next step”, an owner (Client / Advisor / CPA / Attorney), and a target date.</td></tr>
+<tr><td>21</td><td>Glossary</td><td>Terms used in the report (Section 16).</td></tr>
+<tr><td>22</td><td>Assumptions &amp; disclosures</td><td>All assumptions with values, data sources, methodology summary, full disclaimer, advisor signature block, and license numbers.</td></tr>
+</table>
+<div class="box"><b>Report options panel</b> (before generating): pick sections to include, show or hide “How LSRT can help”, choose a scenario to report, include a scenario comparison page, and set the cover note. Each generation saves a new version.</div>
+
+<h1 id="s12">12. Advisor dashboard features</h1>
+<ul>
+<li><b>KPI cards:</b> new intakes (7 days), in review, reports generated this month, annual reviews due in 30 days.</li>
+<li><b>Client table:</b> name, age, submitted date, status badge, readiness score, Monte Carlo %, investable assets, next review date. Includes search, filter, sort, and CSV export.</li>
+<li><b>Client workspace:</b> editable profile with change tracking; live analysis that recalculates within 2 seconds of an edit; charts that match the PDF.</li>
+<li><b>Scenarios:</b> duplicate the base plan, change any input (retirement age, SS age, spending, returns, Roth conversions, LTC event, annuity purchase), and view up to 3 scenarios side by side (success %, lifetime tax, legacy, income).</li>
+<li><b>Opportunity flags:</b> a badge list on each client (e.g. “Roth candidate”, “Life insurance gap $350k”, “Annuity income gap”, “LTC unprotected”) so you can see business opportunities at a glance.</li>
+<li><b>Notes &amp; tasks:</b> time-stamped notes, follow-up tasks with due dates.</li>
+<li><b>Annual review:</b> set a review date when a report is presented; an email reminder fires 30 days before; one click sends the client an “update your info” link prefilled with last year’s answers.</li>
+<li><b>Settings:</b> branding, disclosures, default assumptions, Assumptions Table editor, email templates.</li>
+</ul>
+
+<h1 id="s13">13. Compliance, privacy &amp; security</h1>
+<div class="warn"><b>Important:</b> have your compliance department, broker-dealer, or an attorney review the report language before launch. Recommending specific securities or investment allocations may require investment-adviser registration (RIA/IAR). Insurance-only licenses usually allow educational analysis and insurance and annuity solutions. Set the allocation section to “educational” if you are not securities-licensed.</div>
+<ul>
+<li><b>Disclaimer</b> (footer, plus the full version on the last page): “This report is for educational and illustrative purposes only. It is based on information you provided and on assumptions that may not occur. Projections are hypothetical, are not guarantees, and do not reflect actual investment results. LSRT Insurance does not provide tax or legal advice; consult a qualified tax professional or attorney. Insurance product guarantees are subject to the claims-paying ability of the issuing company.”</li>
+<li>Monte Carlo disclosure explaining what the simulation is and its limitations.</li>
+<li>Saved, unchangeable copy of every report sent (audit trail), kept for at least 6 years or as your regulators require.</li>
+<li>Data: HTTPS everywhere, encryption at rest, private file storage with expiring links, no SSNs or account numbers collected, role-based access, audit log, daily backups, and a client data-deletion process on request.</li>
+<li>Security: rate-limited login, two-factor authentication for the advisor, 30-minute idle timeout, CAPTCHA or honeypot on the public form, input validation on server and client.</li>
+<li>Privacy notice and consent checkbox on the intake form, plus a privacy page linked in the footer.</li>
+</ul>
+
+<h1 id="s14">14. Build phases &amp; acceptance tests</h1>
+<table>
+<tr><th style="width:13%">Phase</th><th>Scope</th><th style="width:30%">Acceptance criteria</th></tr>
+<tr><td><b>1 — Foundation</b></td><td>Branding, landing page, advisor login and 2FA, database, 8-step intake with autosave and validation, email alerts, dashboard list, client profile view/edit.</td><td>A phone user can complete the intake in under 15 minutes; the advisor sees it and can edit it.</td></tr>
+<tr><td><b>2 — Engine</b></td><td>Assumptions Table + Settings editor, every module in Section 8, readiness score, unit tests.</td><td>All tests in 14.1 pass; results recalculate on edit.</td></tr>
+<tr><td><b>3 — Report</b></td><td>On-screen Analysis tab with charts, PDF generation, report history and versions, download.</td><td>The PDF matches Section 11, every page is branded, and there are no cut-off tables.</td></tr>
+<tr><td><b>4 — Advice</b></td><td>Recommendation rules, approve/edit workflow, AI narrative with number validation, scenarios, opportunity flags.</td><td>Every recommendation shows client-specific numbers; the AI never introduces a number not found in the results.</td></tr>
+<tr><td><b>5 — Launch</b></td><td>Compliance review, custom domain, annual-review reminders, backups, security checks.</td><td>Disclosures approved; real client test run.</td></tr>
+</table>
+<h2>14.1 Required unit tests (exact expected values)</h2>
+<table>
+<tr><th style="width:50%">Test</th><th>Expected</th></tr>
+<tr><td>FRA for birth years 1954 / 1957 / 1960</td><td>66y0m / 66y6m / 67y0m</td></tr>
+<tr><td>PIA $2,000, FRA 67, claim at 62 / 67 / 70</td><td>$1,400 / $2,000 / $2,480</td></tr>
+<tr><td>PIA $2,000, FRA 67, claim at 64</td><td>$1,600 (20% reduction)</td></tr>
+<tr><td>PIA $2,000, FRA 66y6m, claim at 62 (54 months early)</td><td>$1,450 (27.5% reduction)</td></tr>
+<tr><td>Spousal: worker PIA $2,000, spouse own PIA $600, spouse at FRA</td><td>$1,000 total</td></tr>
+<tr><td>Spousal only (own PIA $0), claim at 62, FRA 67</td><td>$650 (32.5% of worker PIA)</td></tr>
+<tr><td>Break-even 62 vs 67 / 67 vs 70 (PIA $2,000, no COLA)</td><td>≈ 78.7 / ≈ 82.5 years</td></tr>
+<tr><td>Federal tax: MFJ 2026, gross $150,000, standard deduction only</td><td>Taxable $117,800 → tax $15,340; marginal 22%</td></tr>
+<tr><td>Taxable SS: MFJ, SS $40,000, other income $30,000</td><td>PI = $50,000 → taxable SS = min(34,000, 0.85×6,000 + 6,000) = $11,100</td></tr>
+<tr><td>RMD: $500,000 balance at 75 / 73</td><td>$20,325.20 / $18,867.92</td></tr>
+<tr><td>RMD start age: born 1955 / born 1962</td><td>73 / 75</td></tr>
+<tr><td>4% rule: $1,000,000</td><td>$40,000 in year 1</td></tr>
+<tr><td>IRMAA 2026: single MAGI $120,000</td><td>Part B $284.10/mo; Part D surcharge $14.50/mo</td></tr>
+<tr><td>Monte Carlo with seed 42: identical inputs run twice</td><td>Identical success %</td></tr>
+<tr><td>Monte Carlo sanity: $2M portfolio, $40k/yr draw, 30 yrs, 6.5%/11%</td><td>Success &gt; 90%</td></tr>
+<tr><td>Monte Carlo sanity: $300k portfolio, $60k/yr draw, 30 yrs</td><td>Success &lt; 10%</td></tr>
+</table>
+<h2>14.2 Sample test clients (load as seed data)</h2>
+<p><b>Client A — “James &amp; Linda Mitchell”:</b> married, MFJ, ages 58 and 56, incomes $120k / $45k, 401(k) $620k, Trad IRA $90k, Roth IRA $40k, brokerage $85k, cash $30k, home $450k with a $110k mortgage, spending $7,500/mo now and $6,500/mo in retirement, SS PIA $2,900 / $1,300, retire at 63 / 62, moderate risk, no LTC coverage, will yes / trust no. This client should trigger R03/R04, R06, R14, R16, and R22.</p>
+<p><b>Client B — “Sarah Thompson”:</b> single, age 45, income $85k, 401(k) $140k, Roth $25k, cash $8k, spending $4,800/mo, SS PIA $2,100, retire at 67, aggressive risk, contributes 3% with a 5% match, no estate documents. This client should trigger R07, R10, R12, R18, and R21.</p>
+
+<h1 id="s15">15. Recommended upgrades (Phase 2 &amp; 3)</h1>
+<p>These features will set your practice apart, roughly in order of value:</p>
+<ol>
+<li><b>Interactive client meeting mode:</b> a full-screen presentation view with sliders (retirement age, SS age, spending) that update the success % live during meetings.</li>
+<li><b>Annuity / guaranteed income illustrator:</b> enter a premium and payout rate to see the effect on the income floor, Monte Carlo, and legacy (SPIA, DIA, FIA with an income rider).</li>
+<li><b>Insurance needs module:</b> deeper life, LTC, and disability analysis, with “before vs. after coverage” plan results.</li>
+<li><b>Client portal:</b> clients log in to see reports, upload documents, and update information annually.</li>
+<li><b>SSA statement reader:</b> upload the SSA PDF and use AI to extract the earnings record and PIA (advisor confirms).</li>
+<li><b>e-Signature and scheduling:</b> Calendly booking from the thank-you page; DocuSign for engagement letters.</li>
+<li><b>CRM sync:</b> push clients and tasks to your CRM (e.g. HubSpot, Redtail, Wealthbox).</li>
+<li><b>Historical back-testing:</b> show how the plan would have performed retiring in 1929, 1966, 2000, and 2008.</li>
+<li><b>State tax engine:</b> full state income-tax brackets, and state-level Social Security and retirement income exclusions.</li>
+<li><b>Lead magnet:</b> a free 2-minute “Retirement Readiness Quiz” on your website that feeds into the full intake.</li>
+<li><b>Spanish-language intake and report.</b></li>
+<li><b>Multi-advisor support</b> with roles, if you add staff.</li>
+</ol>
+<h1 id="s16">16. Glossary of retirement terms (for the report appendix)</h1>
+<table>
+<tr><th style="width:26%">Term</th><th>Plain-English definition</th></tr>
+<tr><td>Primary Insurance Amount (PIA)</td><td>Your Social Security benefit if you claim exactly at Full Retirement Age.</td></tr>
+<tr><td>Full Retirement Age (FRA)</td><td>The age (66–67, based on birth year) when you get 100% of your PIA.</td></tr>
+<tr><td>Delayed Retirement Credits</td><td>An 8% per year increase for waiting past FRA, up to age 70.</td></tr>
+<tr><td>Spousal benefit</td><td>Up to 50% of your spouse’s PIA, based on their work record.</td></tr>
+<tr><td>Survivor benefit</td><td>When a spouse dies, the survivor keeps the larger of the two Social Security checks.</td></tr>
+<tr><td>Break-even age</td><td>The age when total benefits from waiting catch up to total benefits from claiming early.</td></tr>
+<tr><td>Earnings test</td><td>A rule that temporarily withholds Social Security benefits if you work and earn above a limit before FRA.</td></tr>
+<tr><td>Provisional income</td><td>The formula that decides how much of your Social Security is taxable (up to 85%).</td></tr>
+<tr><td>COLA</td><td>Cost-of-living adjustment: the yearly inflation increase to Social Security.</td></tr>
+<tr><td>Monte Carlo simulation</td><td>Thousands of random market scenarios used to estimate the chance your money lasts.</td></tr>
+<tr><td>Probability of success</td><td>The share of simulations in which you never run out of money.</td></tr>
+<tr><td>Sequence-of-returns risk</td><td>The danger of poor market returns in the first years of retirement.</td></tr>
+<tr><td>4% rule</td><td>A guideline: withdraw 4% of savings in year one, then adjust for inflation.</td></tr>
+<tr><td>Guardrails</td><td>Rules that trim or raise spending when markets move a lot.</td></tr>
+<tr><td>Bucket strategy</td><td>Splitting savings into cash (near-term), bonds (mid-term), and stocks (long-term).</td></tr>
+<tr><td>Income floor</td><td>Guaranteed income (SS, pension, annuity) that covers essential expenses.</td></tr>
+<tr><td>Income Coverage Ratio</td><td>Guaranteed income divided by essential expenses.</td></tr>
+<tr><td>Tax-deferred account</td><td>401(k)/Traditional IRA: taxes are paid when money is withdrawn.</td></tr>
+<tr><td>Tax-free (Roth) account</td><td>Taxes are paid up front; qualified withdrawals are tax-free.</td></tr>
+<tr><td>Taxable account</td><td>A brokerage or bank account; you pay tax on interest, dividends, and gains.</td></tr>
+<tr><td>Tax diversification</td><td>Holding money in all three tax buckets for flexibility.</td></tr>
+<tr><td>Marginal tax bracket</td><td>The tax rate on your next dollar of income.</td></tr>
+<tr><td>Effective tax rate</td><td>Total tax divided by total income.</td></tr>
+<tr><td>Roth conversion</td><td>Moving money from a pre-tax account to a Roth and paying tax now to avoid it later.</td></tr>
+<tr><td>Required Minimum Distribution (RMD)</td><td>The yearly withdrawal the IRS requires from pre-tax accounts starting at 73 or 75.</td></tr>
+<tr><td>Qualified Charitable Distribution (QCD)</td><td>A gift from your IRA directly to charity at age 70½ or older; it is not taxed as income.</td></tr>
+<tr><td>Catch-up contribution</td><td>Extra retirement contributions allowed at age 50+ (higher at 60–63).</td></tr>
+<tr><td>HSA</td><td>Health Savings Account: tax-deductible in, tax-free growth, tax-free out for medical costs.</td></tr>
+<tr><td>Medicare Parts A / B / D</td><td>Hospital / medical / prescription drug coverage starting at age 65.</td></tr>
+<tr><td>Medigap vs. Medicare Advantage</td><td>Supplement insurance to Original Medicare vs. an all-in-one private plan.</td></tr>
+<tr><td>IRMAA</td><td>A higher Medicare premium for people with higher income (based on income from 2 years earlier).</td></tr>
+<tr><td>Initial Enrollment Period</td><td>The 7-month window around your 65th birthday to sign up for Medicare.</td></tr>
+<tr><td>Long-term care (LTC)</td><td>Help with daily living (home care, assisted living, nursing home), mostly not covered by Medicare.</td></tr>
+<tr><td>Hybrid life/LTC policy</td><td>Life insurance that can also pay for long-term care.</td></tr>
+<tr><td>Annuity (SPIA / DIA / FIA)</td><td>An insurance contract that can provide guaranteed lifetime income.</td></tr>
+<tr><td>Asset allocation</td><td>The mix of stocks, bonds, and cash in your portfolio.</td></tr>
+<tr><td>Glide path</td><td>Gradually reducing stock exposure as retirement approaches.</td></tr>
+<tr><td>Asset location</td><td>Placing investments in the account type where they are taxed least.</td></tr>
+<tr><td>Rebalancing</td><td>Restoring your target mix after markets move.</td></tr>
+<tr><td>Inflation</td><td>The rising cost of living that reduces purchasing power over time.</td></tr>
+<tr><td>Will / Revocable living trust</td><td>Documents that direct who gets your assets; a trust can avoid probate.</td></tr>
+<tr><td>Power of attorney (POA)</td><td>Authorizes someone to handle your finances if you can’t.</td></tr>
+<tr><td>Healthcare directive</td><td>Your medical wishes and healthcare agent.</td></tr>
+<tr><td>Beneficiary designation</td><td>Who inherits an account or policy; it overrides your will.</td></tr>
+<tr><td>Probate</td><td>The court process for settling an estate without a trust.</td></tr>
+<tr><td>Estate tax exemption</td><td>The amount you can leave free of federal estate tax ($15M per person in 2026).</td></tr>
+<tr><td>Step-up in basis</td><td>Heirs’ cost basis resets to the value at death, reducing capital gains tax.</td></tr>
+<tr><td>Retirement Readiness Score</td><td>LSRT’s 0–100 summary of how prepared you are.</td></tr>
+</table>
+
+<h1 id="s17">17. Master prompt to paste into Manus</h1>
+<p>Copy everything in the box below and paste it into Manus together with this PDF.</p>
+<pre>I am a retirement advisor at LSRT Insurance (solo advisor). Build me a production-quality web platform
+exactly as described in the attached specification "LSRT Insurance — Retirement Planning Platform —
+Build Specification v1.0". Follow it section by section.
+
+Summary:
+- Public, mobile-friendly 8-step client intake (Section 5) with autosave, validation, consent.
+- Secure advisor login (2FA) and dashboard (Sections 4, 12).
+- Pure, unit-tested calculation engine (Section 8) using exact SSA/IRS/CMS rules: SS by month with
+  spousal/survivor benefits and a claiming optimizer, cash-flow projection with tax-smart withdrawal order,
+  Monte Carlo (seeded, 5,000 runs), withdrawal strategies, federal tax by filing status, taxable SS,
+  Roth conversion bracket-fill with IRMAA check, RMDs (SECURE 2.0 ages), Medicare + IRMAA, LTC stress test,
+  allocation/glide path, life insurance needs, estate checklist, Retirement Readiness Score.
+- ALL yearly figures come from an editable Assumptions Table by year (Section 7) - never hard-code them.
+- Recommendation rules R01-R25 (Section 9); I approve/edit every recommendation before it reaches a report.
+- Optional AI narrative (Section 10): the AI writes text only, uses only numbers from the results JSON, and
+  every number is validated.
+- Branded 16-22 page PDF report (Section 11): navy #1B3A6B, gold #C9A84C, SVG charts, saved versions.
+- Compliance, privacy, security (Section 13).
+
+How to work:
+1. First reply with your plan, tech stack, data model and the phase list from Section 14. Wait for my OK.
+2. Build one phase at a time. At the end of each phase show me what works and how to test it.
+3. Implement every unit test in Section 14.1 and show me they pass. Load the two sample clients (14.2).
+4. If anything in the spec is unclear or a rule/limit looks outdated, ask me - do not guess.
+5. Do not collect SSNs or account numbers. Put disclaimers on every report page.
+
+Brand: LSRT Insurance - "Your Retirement, Expertly Planned". My logo will be uploaded in Settings.</pre>
+<div class="box"><b>Tips for working with Manus:</b> review each phase before approving the next; enter the two sample clients yourself and read the PDF as if you were the client; ask Manus to “show the formula and the test” for any number that looks wrong; update the Assumptions Table every January.</div>
+<p class="small" style="margin-top:24px">This specification is a technical guide for software development. It is not tax, legal, or investment advice. Tax figures are for 2026 as of October 2026 and must be checked against official IRS, SSA, and CMS sources before use and every year after.</p>
+</body></html>
