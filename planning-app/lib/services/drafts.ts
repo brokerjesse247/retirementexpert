@@ -19,10 +19,15 @@ export async function requireDraft(request: NextRequest): Promise<DraftContext> 
   if (!token) throw new ApiError(404, 'Draft not found.');
   const draft = await db.intakeDraft.findUnique({ where: { sessionTokenHash: tokenHash(token) } });
   if (!draft) throw new ApiError(404, 'Draft not found.');
+  if (draft.originClientId) {
+    if (!draft.updateExpiresAt || draft.updateExpiresAt <= new Date()) throw new ApiError(410, 'This annual update link expired. Ask your advisor for a fresh link.');
+    const origin = await db.client.findFirst({ where: { id: draft.originClientId, advisorId: draft.originAdvisorId ?? '', status: { not: 'ARCHIVED' } }, select: { id: true } });
+    if (!origin) throw new ApiError(410, 'This annual update is no longer available.');
+  }
   return { draft, token, data: decryptJson<IntakeData>(draft.encryptedData) };
 }
 
-export function draftResponse(context: { draft: { step: number; revision: number; submittedAt: Date | null; csrfToken: string }; data: IntakeData }) {
+export function draftResponse(context: { draft: { step: number; revision: number; submittedAt: Date | null; csrfToken: string; originClientId?: string | null }; data: IntakeData }) {
   const step = context.draft.submittedAt ? context.draft.step : safeDraftStep(context.data, context.draft.step);
-  return { data: context.data, step, revision: context.draft.revision, submitted: Boolean(context.draft.submittedAt), csrfToken: context.draft.csrfToken };
+  return { data: context.data, step, revision: context.draft.revision, submitted: Boolean(context.draft.submittedAt), annualUpdate: Boolean(context.draft.originClientId), csrfToken: context.draft.csrfToken };
 }

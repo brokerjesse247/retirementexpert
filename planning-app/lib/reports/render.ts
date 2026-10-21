@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { PlanningAssumptions, PlanningInput, ReportRenderInput } from '../calculations/types';
+import type { AdvisorReportInput } from './advisor-types';
 import { roundMoney } from '../calculations/math';
 import {
   escapeSvg,
@@ -463,17 +464,42 @@ function protectionEstatePage(input: ReportRenderInput, results: Record<string, 
 }
 
 function actionPlanPages(input: ReportRenderInput): Page[] {
-  const approved = input.approvedRecommendations;
+  const enriched = input as AdvisorReportInput;
+  const approved = enriched.approvedRecommendations;
   if (!approved.length) return [page('Action plan — advisor review', 'action-plan-priority', '<p class="lede">No automated recommendations or dollar impacts are added by the report renderer.</p><p class="missing">No recommendations have been approved.</p><p>Review the model limitations and missing inputs with your advisor before deciding on any action. Tax and estate decisions require qualified professional review.</p>')];
-  const byPriority = (priority: string) => approved.filter((item) => item.priority.toUpperCase() === priority);
-  const high = byPriority('HIGH');
-  const medium = byPriority('MEDIUM');
-  const low = byPriority('LOW');
-  const cards = (items: typeof approved) => items.length ? items.map((item) => `<article class="recommendation"><div class="checkbox">□</div><div><span class="priority ${escapeHtml(item.priority.toLowerCase())}">${escapeHtml(item.priority)}</span><h3>${escapeHtml(item.title)}</h3><p>${textWithBreaks(item.body)}</p><dl><dt>Owner</dt><dd>${escapeHtml(item.owner || 'Not assigned')}</dd><dt>Target date</dt><dd>${escapeHtml(item.targetDate || 'Not assigned')}</dd></dl></div></article>`).join('') : '<p class="missing">No recommendations have been approved.</p>';
-  return [
-    page('Action plan — priority actions', 'action-plan-priority', `<p class="lede">Only advisor-approved recommendations are included. Complete the checkbox after confirming the action with your advisor and relevant professional.</p><h2>High priority</h2>${cards(high)}<h2>Medium priority</h2>${cards(medium)}`),
-    page('Action plan — additional actions', 'action-plan-additional', `<p class="lede">No automated recommendations or dollar impacts are added by the report renderer.</p><h2>Low priority</h2>${cards(low)}<h2>All approved actions</h2>${approved.length ? table(['Priority', 'Action', 'Owner', 'Target date'], approved.map((item) => [escapeHtml(item.priority), escapeHtml(item.title), escapeHtml(item.owner || 'Not assigned'), escapeHtml(item.targetDate || 'Not assigned')]), true) : '<p class="missing">No recommendations have been approved.</p>'}`),
-  ];
+  const rank: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+  const sorted = [...approved].sort((a, b) => (rank[a.priority.toUpperCase()] ?? 3) - (rank[b.priority.toUpperCase()] ?? 3));
+  const groups: string[][] = [[]]; let cost = 0;
+  for (const item of sorted) {
+    const details = [item.body, item.nextStep ? `Next step: ${item.nextStep}` : '', item.dollarImpact != null ? `${item.impactLabel || 'Illustrative dollar impact'}: ${formatMoney(item.dollarImpact)}` : '', enriched.showLsrtHelp && item.lsrtHelp ? `How LSRT can help: ${item.lsrtHelp}` : ''].filter(Boolean).join('\n\n');
+    // Each continuation preserves the exact original characters; no ellipsis or discarded content.
+    const pieces = details.match(/[\s\S]{1,1200}/g) ?? [''];
+    pieces.forEach((piece, index) => {
+      const estimate = 120 + Math.ceil(piece.length / 85) * 14 + Math.ceil(item.title.length / 70) * 16;
+      if (groups[groups.length - 1].length && cost + estimate > 640) { groups.push([]); cost = 0; }
+      const card = `<article class="recommendation"><div class="checkbox">□</div><div><span class="priority ${escapeHtml(item.priority.toLowerCase())}">${escapeHtml(item.priority)}</span><h3>${escapeHtml(item.title)}${index ? ' — continued' : ''}</h3><p>${textWithBreaks(piece)}</p>${index ? '' : `<dl><dt>Owner</dt><dd>${escapeHtml(item.owner || 'Not assigned')}</dd><dt>Target date</dt><dd>${escapeHtml(item.targetDate || 'Not assigned')}</dd></dl>`}</div></article>`;
+      groups[groups.length - 1].push(card); cost += estimate;
+    });
+  }
+  return groups.map((cards, index) => page(index ? 'Action plan — continued' : 'Action plan — approved actions', index ? `action-plan-additional-${index}` : 'action-plan-priority', `<p class="lede">Only current advisor-approved actions are included. Confirm each action with your advisor and relevant professional. Illustrative impacts are not guarantees.</p>${cards.join('')}`));
+}
+
+function scenarioComparisonPage(input: AdvisorReportInput): Page | null {
+  if (!input.scenarioComparison?.length) return null;
+  const rows = input.scenarioComparison.slice(0, 3).map(s => [escapeHtml(s.name), s.successPercent == null ? 'Unavailable' : percentCell(s.successPercent, 'PERCENTAGE_POINTS'), s.lifetimeTax == null ? 'Unavailable' : formatMoney(s.lifetimeTax), s.medianLegacy == null ? 'Unavailable' : formatMoney(s.medianLegacy), s.retirementIncomeAnnual == null ? 'Unavailable' : formatMoney(s.retirementIncomeAnnual)]);
+  return page('Scenario comparison', 'scenario-comparison', `<p class="lede">These are independently saved alternatives, not changes to the submitted profile. Results use the same calculation engine and their respective saved assumptions.</p>${table(['Scenario', 'Simulation success', 'Lifetime federal tax', 'Median ending assets', 'Retirement-year income'], rows)}<p class="note">Income means annual non-portfolio Social Security, pension, annuity and other income in the modeled retirement year. Ending assets are the seeded simulation median, not a guaranteed legacy. A scenario comparison is educational and is not a product quote.</p>`);
+}
+
+function attachApprovedNarrative(pages: Page[], input: AdvisorReportInput): Page[] {
+  if (!input.approvedNarrative) return pages;
+  const used = new Set<string>();
+  return pages.map(sheet => {
+    const entry = Object.entries(input.approvedNarrative!.sections).find(([id, text]) => !used.has(id) && Boolean(text) && sheet.id.startsWith(id));
+    if (!entry) return sheet;
+    used.add(entry[0]);
+    const note = `<aside class="approved-narrative" data-narrative-section="${escapeHtml(entry[0])}"><h2>Advisor-reviewed explanation</h2><p>${textWithBreaks(entry[1])}</p></aside>`;
+    return { ...sheet, body: note + sheet.body };
+  });
 }
 
 function glossaryPage(): Page {
@@ -648,10 +674,12 @@ function reportPages(input: ReportRenderInput): Page[] {
   if (include(sections, 'long-term-care')) pages.push(ltcPage(results));
   if (include(sections, 'investments')) pages.push(investmentsPage(results));
   if (include(sections, 'protection-estate')) pages.push(protectionEstatePage(input, results));
+  const comparison = scenarioComparisonPage(input as AdvisorReportInput);
+  if (comparison) pages.push(comparison);
   if (include(sections, 'action-plan')) pages.push(...actionPlanPages(input));
   if (include(sections, 'glossary')) pages.push(glossaryPage());
   if (include(sections, 'assumptions-disclosures')) pages.push(...disclosuresPages(input, results));
-  return pages;
+  return attachApprovedNarrative(pages, input as AdvisorReportInput);
 }
 
 function pageHtml(pageData: Page, pageNumber: number, pageCount: number, input: ReportRenderInput): string {
@@ -673,7 +701,7 @@ function reportCssOverrides(): string {
 /** Render the selected saved-analysis sections into a self-contained, escaped Letter-report HTML document. */
 export function renderReportHtml(input: ReportRenderInput): string {
   const pages = reportPages(input);
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(`Retirement plan for ${reportClientTitle(input)}`)}</title><style>${reportCss()}${reportCssOverrides()}</style></head>
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(`Retirement plan for ${reportClientTitle(input)}`)}</title><style>${reportCss()}${reportCssOverrides()}.approved-narrative{border-left:3px solid #168CFF;padding:8px 10px;margin:8px 0 12px;background:#0D1016}.approved-narrative h2{font-size:12px}.approved-narrative p{font-size:10px;line-height:1.4}</style></head>
 <body>${pages.map((item, index) => pageHtml(item, index + 1, pages.length, input)).join('')}</body></html>`;
 }
 
@@ -728,6 +756,26 @@ export async function renderReportPdf(input: ReportRenderInput): Promise<Buffer>
     await page.route('**/*', (route: { abort: (errorCode?: string) => Promise<void> }) => route.abort('blockedbyclient'));
     await page.setContent(renderReportHtml(input), { waitUntil: 'load' });
     await page.evaluate(async () => { await document.fonts?.ready; });
+    await page.evaluate(() => {
+      for (const sheet of Array.from(document.querySelectorAll<HTMLElement>('.page'))) {
+        const note = sheet.querySelector<HTMLElement>('.approved-narrative');
+        const main = sheet.querySelector<HTMLElement>('.page-main');
+        const footer = sheet.querySelector<HTMLElement>('.page-footer');
+        if (!note || !main || !footer) continue;
+        const bottom = Math.max(main.getBoundingClientRect().bottom, ...Array.from(main.querySelectorAll<HTMLElement>('*')).map(e => e.getBoundingClientRect().bottom));
+        if (bottom <= footer.getBoundingClientRect().top - 2) continue;
+        const continuation = sheet.cloneNode(true) as HTMLElement;
+        continuation.dataset.section = (sheet.dataset.section || 'section') + '-approved-explanation';
+        const continuedMain = continuation.querySelector<HTMLElement>('.page-main')!;
+        const heading = document.createElement('h1'); heading.textContent = 'Advisor-reviewed explanation';
+        continuedMain.replaceChildren(heading, note);
+        const headerTitle = continuation.querySelector<HTMLElement>('.page-header > span:last-child');
+        if (headerTitle) headerTitle.textContent = 'Advisor-reviewed explanation — continued';
+        sheet.after(continuation);
+      }
+      const sheets = Array.from(document.querySelectorAll<HTMLElement>('.page'));
+      sheets.forEach((sheet, index) => { const label = sheet.querySelector<HTMLElement>('.page-footer strong'); if (label) label.textContent = `Page ${index + 1} of ${sheets.length}`; });
+    });
     await assertReportLayoutFits(page);
     const bytes: Uint8Array = await page.pdf({
       format: 'Letter', printBackground: true, preferCSSPageSize: true,

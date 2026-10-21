@@ -426,6 +426,20 @@ function incomeForYear(
     otherIncome += person.rentalOtherMonthly * otherMonths;
   }
 
+  for (const purchase of input.hypotheticalAnnuities ?? []) {
+    const owner = input.persons.find((person) => person.role === purchase.owner);
+    if (!owner || !isAliveInYear(owner, year)) continue;
+    const paymentMonths = monthsInYear(owner, year, (ageMonths) => ageMonths >= purchase.startAgeMonths);
+    annuity += purchase.monthlyIncome * paymentMonths;
+    if (purchase.taxQualification === 'NONQUALIFIED') {
+      warnings.push(`Scenario hypothetical annuity for ${owner.name}: nonqualified exclusion ratio/basis is unavailable. The advisor-supplied payment is conservatively included as ordinary taxable income.`);
+    } else if (purchase.taxQualification === null) {
+      warnings.push(`Scenario hypothetical annuity for ${owner.name}: tax qualification is unknown. The advisor-supplied payment is conservatively included as ordinary taxable income.`);
+    } else {
+      warnings.push(`Scenario hypothetical annuity for ${owner.name}: qualified payment is included as ordinary taxable income; distribution eligibility and contract treatment require confirmation.`);
+    }
+  }
+
   // A deceased owner’s pension is reduced to the supplied survivor percentage for the living spouse.
   if (input.persons.length === 2) {
     const [first, second] = input.persons;
@@ -512,6 +526,11 @@ function ensureInputIsSupported(input: PlanningInput, assumptions: PlanningAssum
   for (const account of input.accounts) {
     requireFiniteNonNegative(account.balance, `${account.owner} ${account.type} balance`);
     if (account.costBasis !== null) requireFiniteNonNegative(account.costBasis, `${account.owner} ${account.type} cost basis`);
+  }
+  for (const purchase of input.hypotheticalAnnuities ?? []) {
+    requireFiniteNonNegative(purchase.monthlyIncome, 'Hypothetical annuity monthly income');
+    requireFiniteNonNegative(purchase.premium, 'Hypothetical annuity premium');
+    if (!Number.isInteger(purchase.startAgeMonths) || purchase.startAgeMonths < 0) throw new Error('Hypothetical annuity start age must be a non-negative whole number of months.');
   }
 }
 

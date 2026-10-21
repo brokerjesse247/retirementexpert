@@ -5,11 +5,14 @@ import { join } from 'node:path';
 import { DEFAULT_ASSUMPTIONS } from '../lib/assumptions/defaults';
 import { mapPlanningInput } from '../lib/calculations/input';
 import { runAnalysis } from '../lib/calculations/engine';
+import { validatedTemplateNarrative } from '../lib/narrative/templates';
+import type { AdvisorReportInput } from '../lib/reports/advisor-types';
 import type { ReportRenderInput } from '../lib/calculations/types';
 import { emptyIntake, type IntakeData } from '../lib/intake/schema';
 import { REPORT_FOOTER_DISCLAIMER, escapeHtml, renderReportHtml, renderReportPdf, summarizeReportWarnings } from '../lib/reports/render';
 
-const reviewDirectory = join(process.cwd(), 'private-storage', 'report-review');
+const extended = process.argv.includes('--advisor-extensions');
+const reviewDirectory = join(process.cwd(), 'private-storage', extended ? 'advisor-report-review' : 'report-review');
 const htmlPath = join(reviewDirectory, 'synthetic-report.html');
 const pdfPath = join(reviewDirectory, 'synthetic-report.pdf');
 const textPath = join(reviewDirectory, 'synthetic-report.txt');
@@ -124,6 +127,15 @@ async function main(): Promise<void> {
     checksum: 'synthetic-snapshot-checksum-no-client-data',
   };
 
+  if (extended) {
+    const enriched = report as AdvisorReportInput;
+    const narrative = validatedTemplateNarrative({ firstName: 'Synthetic', concerns: ['income', 'healthcare'], scenarioName: report.scenarioName || 'Base', results: report.results, approvedRecommendations: [] }, { results: report.results, approvedRecommendations: [] });
+    enriched.branding.letter = narrative.letter;
+    enriched.approvedNarrative = { letter: narrative.letter, sections: narrative.sections };
+    enriched.showLsrtHelp = true;
+    enriched.approvedRecommendations = Array.from({ length: 25 }, (_, i) => ({ title: `SYNTHETIC_ACTION_${i}`, body: `Fictional approved action ${i}: review these assumptions and limitations with the advisor.`, priority: 'HIGH', owner: 'Synthetic advisor', nextStep: `SYNTHETIC_NEXT_${i}`, targetDate: '2027-01-10', lsrtHelp: 'Educational protection discussion only; no product guarantee.' }));
+    enriched.scenarioComparison = [{ id: 'synthetic-base', name: 'Synthetic base', successPercent: (analysis.results.monteCarlo as { successPercent: number }).successPercent, lifetimeTax: null, medianLegacy: null, retirementIncomeAnnual: null }];
+  }
   const html = renderReportHtml(report);
   writeFileSync(htmlPath, html, 'utf8');
   process.env.CHROMIUM_EXECUTABLE_PATH ||= '/usr/bin/chromium';
@@ -142,16 +154,16 @@ async function main(): Promise<void> {
     actualEngine: analysis.engineVersion,
     defaultSeed: analysis.seed === 42,
     defaultMonteCarloRuns: (analysis.results.monteCarlo as { runs: number }).runs === 5_000,
-    selectedDefaultSections: sectionIds.length === 22 && sectionIds[0] === 'cover' && sectionIds.at(-1) === 'assumptions-disclosures',
-    exactDefaultLetterPages: pdfInspection.pageCount === 22,
-    coverFooterPageOneOfN: pdfInspection.pages[0]?.hasFooterDisclaimer === true && pdfText.includes('Page 1 of 22'),
+    selectedDefaultSections: (extended ? sectionIds.length > 22 : sectionIds.length === 22) && sectionIds[0] === 'cover' && sectionIds.at(-1) === 'assumptions-disclosures',
+    exactDefaultLetterPages: (extended ? pdfInspection.pageCount >= sectionIds.length : pdfInspection.pageCount === 22),
+    coverFooterPageOneOfN: pdfInspection.pages[0]?.hasFooterDisclaimer === true && pdfText.includes(`Page 1 of ${pdfInspection.pageCount}`),
     footerDisclaimerOnEveryPage: allFootersPresent,
     selfContainedAssets: !/(?:src|href)=["']https?:\/\//i.test(html) && !/<link\b/i.test(html),
-    approvedLetterIncluded: html.includes('This approved synthetic review letter') && report.branding.letterApproved,
+    approvedLetterIncluded: (extended ? report.branding.letter.length > 300 : html.includes('This approved synthetic review letter')) && report.branding.letterApproved,
     blueBrandingOnly: html.includes('#168CFF') && html.includes('#47B5FF') && !html.includes('#C9A84C'),
     sourceRecordsComplete: allSourceKeysPresent,
     warningsCompleteInAppendix: allWarningsPresent,
-    noUnapprovedRecommendations: report.approvedRecommendations.length === 0 && html.includes('No recommendations have been approved.'),
+    noUnapprovedRecommendations: extended ? Array.from({ length: 25 }, (_, i) => pdfText.includes(`SYNTHETIC_ACTION_${i}`) && pdfText.includes(`SYNTHETIC_NEXT_${i}`)).every(Boolean) : report.approvedRecommendations.length === 0 && html.includes('No recommendations have been approved.'),
     personalizedSyntheticSnapshot: html.includes('Synthetic Review &amp; Morgan Review') && !html.includes('Test Client') && !html.includes('Alex Example'),
     layoutOverflowGatePassed: true,
   };

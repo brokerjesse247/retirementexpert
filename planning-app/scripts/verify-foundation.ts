@@ -89,6 +89,10 @@ async function main(){
    await json(await detail.GET(request('/api/clients/missing','GET',undefined,ac),{params:Promise.resolve({id:'missing'})}),404);record('Advisor dashboard list/age and revision-aware profile editing work');
    const {checkPlanningApis}=await import('./planning-integration-checks');
    await checkPlanningApis({db,clientId:id,advisorId:advisor.id,cookie:ac,csrfToken:me.csrfToken,request,record});
+   const {checkAdvisorFeatureApis}=await import('./advisor-feature-integration-checks');
+   await checkAdvisorFeatureApis({db,clientId:id,advisorId:advisor.id,cookie:ac,csrfToken:me.csrfToken,request,record});
+   const {checkAnnualReviewApis}=await import('./annual-review-integration-checks');
+   await checkAnnualReviewApis({db,clientId:id,advisorId:advisor.id,cookie:ac,csrfToken:me.csrfToken,request,record});
    const active=await db.advisorSession.findUniqueOrThrow({where:{tokenHash:tokenHash(ac.split('=')[1])}});
    const before=active.expiresAt.valueOf();await session.GET(request('/api/auth/session','GET',undefined,ac));
    const after=await db.advisorSession.findUniqueOrThrow({where:{id:active.id}});assert.equal(after.expiresAt.valueOf(),before);record('Passive GET cannot extend the advisor idle timeout');
@@ -103,6 +107,7 @@ async function main(){
    await json(await listing.GET(request('/api/clients','GET',undefined,otherCookie)),401);record('Password reset revokes all previously created sessions');
    assert.equal(await db.emailOutbox.count({where:{status:'SENT'}}),0);record('Test provider sends remain disabled; no false delivery claims');
  }finally{
+   await db.intakeDraft.deleteMany({where:{originAdvisorId:advisor.id}});
    await db.intakeDraft.deleteMany({where:{client:{advisorId:advisor.id}}});
    await db.client.deleteMany({where:{advisorId:advisor.id}});
    await db.assumptionYear.deleteMany({where:{advisorId:advisor.id}});

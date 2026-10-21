@@ -40,3 +40,17 @@
 .operations-status .error,.operations-status .notice{overflow-wrap:anywhere}
 @media(max-width:650px){.analysis-chart-grid{grid-template-columns:1fr}.analysis-kpi-grid{grid-template-columns:1fr 1fr}.report-section-picker{grid-template-columns:1fr}}
 @media(max-width:420px){.analysis-kpi-grid{grid-template-columns:1fr}}
+
+/* Advisor follow-through: existing RetirementExpert blue palette. */
+.client-tabs { flex-wrap: wrap; }
+.recommendations-workspace, .notes-tasks-workspace, .scenarios-workspace, .annual-review-workspace, .narrative-workspace { display: grid; gap: 1.25rem; }
+.opportunity-badges { display: flex; flex-wrap: wrap; gap: .55rem; margin: .7rem 0; }
+.opportunity-badge { display: inline-flex; align-items: center; gap: .35rem; padding: .4rem .7rem; background: rgba(22,140,255,.1); color: #47B5FF; border: 1px solid rgba(22,140,255,.3); border-radius: 999px; font-size: .8rem; }
+.advisor-action-card, .recommendation-card, .task-card, .note-card { padding: 1.1rem; border: 1px solid #263445; background: #0D1016; border-radius: 12px; }
+.advisor-action-card h3, .recommendation-card h3, .task-card h3, .note-card h3 { margin-bottom: .5rem; }
+.advisor-action-card .form-actions, .recommendation-card .form-actions, .task-card .form-actions { flex-wrap: wrap; }
+.scenario-compare-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 1rem; }
+.annual-review-workspace .checkbox-label { margin: .85rem 0; }
+.annual-review-workspace small { display: block; color: #929AA8; }
+.narrative-workspace textarea { min-height: 10rem; resize: vertical; }
+@media(max-width:900px) { .scenario-compare-grid { grid-template-columns:1fr; } .client-tabs { gap:.35rem; } .client-tabs button { font-size:.85rem; padding:.6rem .7rem; } }

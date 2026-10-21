@@ -1,4 +1,4 @@
-import type { MonteCarloInput, PlanningAssumptions, PlanningInput } from './types';
+import type { AnalysisRunOptions, CashFlowOptions, MonteCarloInput, PlanningAssumptions, PlanningInput } from './types';
 import { uniqueWarnings } from './math';
 import { calculateNetWorth } from './net-worth';
 import { calculateSocialSecurity } from './social-security';
@@ -17,7 +17,7 @@ import { calculateReadiness } from './readiness';
 
 export const ENGINE_VERSION = 'retirementexpert-2.0.0';
 
-export function simulationInput(input: PlanningInput, assumptions: PlanningAssumptions, flow: ReturnType<typeof calculateCashFlow>): MonteCarloInput {
+export function simulationInput(input: PlanningInput, assumptions: PlanningAssumptions, flow: ReturnType<typeof calculateCashFlow>, meanReturn?: number): MonteCarloInput {
   const rows = flow.rows.filter(row => row.year >= flow.retirementYear);
   return {
     portfolio: flow.portfolioAtRetirement,
@@ -26,7 +26,7 @@ export function simulationInput(input: PlanningInput, assumptions: PlanningAssum
       if (typeof extended.portfolioNeed === 'number') return Math.max(0, extended.portfolioNeed);
       return Math.max(0, row.spending + row.healthcare + row.goals + row.federalTax + row.stateTax - row.wages - row.socialSecurity - row.pension - row.annuity - row.otherIncome);
     }),
-    meanReturn: assumptions.returnByRisk[input.riskProfile],
+    meanReturn: meanReturn ?? assumptions.returnByRisk[input.riskProfile],
     volatility: assumptions.volatilityByRisk[input.riskProfile],
     runs: assumptions.monteCarloRuns,
     seed: assumptions.monteCarloSeed,
@@ -34,22 +34,34 @@ export function simulationInput(input: PlanningInput, assumptions: PlanningAssum
   };
 }
 
-export function runAnalysis(input: PlanningInput, assumptions: PlanningAssumptions) {
+function mergeCashFlowOptions(base: CashFlowOptions | undefined, supplement: CashFlowOptions | undefined): CashFlowOptions | undefined {
+  if (!base && !supplement) return undefined;
+  return {
+    ...base,
+    ...supplement,
+    rothConversions: { ...base?.rothConversions, ...supplement?.rothConversions },
+    extraExpenses: { ...base?.extraExpenses, ...supplement?.extraExpenses },
+    returnByYear: { ...base?.returnByYear, ...supplement?.returnByYear },
+  };
+}
+
+/** Runs every module against one effective input/assumption snapshot. Base callers omit options. */
+export function runAnalysis(input: PlanningInput, assumptions: PlanningAssumptions, analysisOptions: AnalysisRunOptions = {}) {
   const netWorth = calculateNetWorth(input, assumptions);
   const socialSecurity = calculateSocialSecurity(input, assumptions);
   const taxes = calculateTaxes(input, assumptions);
   const rmd = calculateRmds(input, assumptions);
   const accumulation = calculateAccumulation(input, assumptions);
   const healthcare = calculateHealthcare(input, assumptions);
-  const cashFlow = calculateCashFlow(input, assumptions);
-  const mcInput = simulationInput(input, assumptions, cashFlow);
+  const cashFlow = calculateCashFlow(input, assumptions, analysisOptions.cashFlow);
+  const mcInput = simulationInput(input, assumptions, cashFlow, analysisOptions.monteCarloMeanReturn);
   const monteCarlo = calculateMonteCarlo(mcInput, assumptions);
   const withdrawals = calculateWithdrawalStrategies(mcInput, assumptions);
   const roth = calculateRothConversions(input, assumptions);
   const ltc = calculateLongTermCare(input, assumptions, {
-    calculateCashFlow: (i, a, options) => {
-      const flow = options ? calculateCashFlow(i, a, options) : cashFlow;
-      const simulated = simulationInput(i, a, flow);
+    calculateCashFlow: (i, a, ltcOptions) => {
+      const flow = calculateCashFlow(i, a, mergeCashFlowOptions(analysisOptions.cashFlow, ltcOptions));
+      const simulated = simulationInput(i, a, flow, analysisOptions.monteCarloMeanReturn);
       const rows = flow.rows.filter(row => row.year >= flow.retirementYear);
       return { endingLegacy: flow.endingLegacy, portfolioAtRetirement: simulated.portfolio, rows: rows.map((row, index) => ({ age: row.age, portfolioWithdrawal: simulated.annualWithdrawals[index] })) };
     },
@@ -71,6 +83,7 @@ export function runAnalysis(input: PlanningInput, assumptions: PlanningAssumptio
     ...input.warnings,
     ...Object.values(results).flatMap(result => { const metadata = result as unknown as { warnings?: string[]; meta?: { warnings?: string[] } }; return metadata.meta?.warnings ?? metadata.warnings ?? []; }),
     ...(assumptions.sources.some(source => source.key === 'advisor-rule-edits') ? ['Annual rule values were edited by the advisor and have not been independently reverified.'] : []),
+    ...(analysisOptions.warnings ?? []),
   ]);
   return { engineVersion: ENGINE_VERSION, seed: assumptions.monteCarloSeed, results, warnings };
 }

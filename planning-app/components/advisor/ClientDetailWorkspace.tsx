@@ -7,6 +7,12 @@ import { formatDate, responseMessage, statusLabel } from "./api";
 import { AnalysisWorkspace } from "./AnalysisWorkspace";
 import { ProfileEditor } from "./ProfileEditor";
 import { ReportsWorkspace } from "./ReportsWorkspace";
+import { RecommendationsWorkspace } from "./RecommendationsWorkspace";
+import { ScenariosWorkspace } from "./ScenariosWorkspace";
+import { NarrativeWorkspace } from "./NarrativeWorkspace";
+import { NotesTasksWorkspace } from "./NotesTasksWorkspace";
+import { AnnualReviewWorkspace } from "./AnnualReviewWorkspace";
+import { ClientOpportunityBadges } from "./ClientOpportunityBadges";
 import type { ClientDetailResponse, JsonRecord } from "./types";
 
 type Upload = { id: string; name: string; size: number } | null;
@@ -24,7 +30,7 @@ export function ClientDetailWorkspace({ clientId }: { clientId: string }) {
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [activeTab, setActiveTab] = useState<"profile" | "analysis" | "reports">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "analysis" | "reports" | "recommendations" | "scenarios" | "narrative" | "notes" | "review">("profile");
 
   async function load() {
     setLoading(true); setError("");
@@ -82,9 +88,13 @@ export function ClientDetailWorkspace({ clientId }: { clientId: string }) {
       <button className={activeTab === "profile" ? "active" : ""} type="button" role="tab" aria-selected={activeTab === "profile"} onClick={() => setActiveTab("profile")}>Profile</button>
       <button className={activeTab === "analysis" ? "active" : ""} type="button" role="tab" aria-selected={activeTab === "analysis"} onClick={() => setActiveTab("analysis")}>Analysis</button>
       <button className={activeTab === "reports" ? "active" : ""} type="button" role="tab" aria-selected={activeTab === "reports"} onClick={() => setActiveTab("reports")}>Reports</button>
-      <button type="button" role="tab" aria-disabled="true" disabled>Recommendations (future)</button>
-      <button type="button" role="tab" aria-disabled="true" disabled>Notes (future)</button>
+      <button className={activeTab === "recommendations" ? "active" : ""} type="button" role="tab" aria-selected={activeTab === "recommendations"} onClick={() => setActiveTab("recommendations")}>Recommendations</button>
+      <button className={activeTab === "scenarios" ? "active" : ""} type="button" role="tab" aria-selected={activeTab === "scenarios"} onClick={() => setActiveTab("scenarios")}>Scenarios</button>
+      <button className={activeTab === "narrative" ? "active" : ""} type="button" role="tab" aria-selected={activeTab === "narrative"} onClick={() => setActiveTab("narrative")}>Narrative</button>
+      <button className={activeTab === "notes" ? "active" : ""} type="button" role="tab" aria-selected={activeTab === "notes"} onClick={() => setActiveTab("notes")}>Notes & tasks</button>
+      <button className={activeTab === "review" ? "active" : ""} type="button" role="tab" aria-selected={activeTab === "review"} onClick={() => setActiveTab("review")}>Annual review</button>
     </div>
+    <ClientOpportunityBadges clientId={clientId} key={record.revision} />
     {activeTab === "profile" && <>
       {(error || notice) && <p className={error ? "error" : "notice"} role={error ? "alert" : "status"}>{error || notice}</p>}
       <section className="card profile-status"><div><p className="eyebrow">Review status</p><h2 className="section-title">Manage the intake review</h2><p className="muted">Profile editing retains the submitted intake. Analysis and reports use their own saved, authenticated workflows.</p></div><label className="field"><span>Status</span><select className="input" value={status} onChange={(event) => setStatus(event.target.value)}>{selectableStatuses.map((option) => <option key={option} value={option}>{statusLabel(option)}</option>)}</select></label></section>
@@ -93,5 +103,10 @@ export function ClientDetailWorkspace({ clientId }: { clientId: string }) {
     </>}
     {activeTab === "analysis" && <AnalysisWorkspace clientId={clientId} />}
     {activeTab === "reports" && <ReportsWorkspace clientId={clientId} revision={record.revision} />}
+    {activeTab === "recommendations" && <RecommendationsWorkspace clientId={clientId} />}
+    {activeTab === "scenarios" && <ScenariosWorkspace clientId={clientId} />}
+    {activeTab === "narrative" && <NarrativeWorkspace clientId={clientId} />}
+    {activeTab === "notes" && <NotesTasksWorkspace clientId={clientId} />}
+    {activeTab === "review" && <AnnualReviewWorkspace clientId={clientId} onChanged={() => void load()} />}
   </section>;
 }

@@ -100,6 +100,15 @@ export interface PlanningAccount {
   annuityQualification: 'QUALIFIED' | 'NONQUALIFIED' | null;
   hsaQualified: boolean | null;
 }
+/** An advisor-supplied hypothetical annuity income stream. It is never a carrier quote. */
+export interface HypotheticalAnnuityIncome {
+  owner: PersonRole;
+  monthlyIncome: number;
+  startAgeMonths: number;
+  taxQualification: 'QUALIFIED' | 'NONQUALIFIED' | null;
+  premium: number;
+  fundingAccount: { owner: PersonRole; type: PlanningAccount['type'] };
+}
 export interface PlanningInput {
   asOfDate: string;
   clientName: string;
@@ -108,6 +117,8 @@ export interface PlanningInput {
   state: string;
   persons: PlanningPerson[];
   accounts: PlanningAccount[];
+  /** Empty for Base analyses. Optional to preserve existing PlanningInput callers. */
+  hypotheticalAnnuities?: HypotheticalAnnuityIncome[];
   currentMonthlySpending: number;
   retirementMonthlySpending: number;
   essentialMonthlySpending: number | null;
@@ -152,6 +163,14 @@ export interface CashFlowOptions {
   rothConversions?: Record<string, number>;
   extraExpenses?: Record<string, number>;
   returnByYear?: Record<string, number>;
+}
+/** Options passed to the one shared analysis orchestrator for a saved scenario. */
+export interface AnalysisRunOptions {
+  cashFlow?: CashFlowOptions;
+  /** A validated scenario-level mean return used by the Monte Carlo engine. */
+  monteCarloMeanReturn?: number;
+  /** Explicit, user-visible limitations that belong in the saved result warning set. */
+  warnings?: string[];
 }
 export interface MonteCarloInput {
   portfolio: number;

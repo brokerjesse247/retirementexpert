@@ -154,6 +154,10 @@ model IntakeDraft {
   consentedAt      DateTime?
   consentVersion   String?  @db.VarChar(64)
   clientId         String?  @unique
+  originClientId   String?  @db.VarChar(191)
+  originRevision   Int?
+  originAdvisorId  String?  @db.VarChar(191)
+  updateExpiresAt  DateTime?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   grants           DraftAccessGrant[]
@@ -205,6 +209,8 @@ model Client {
   reports        Report[]
   notes          Note[]
   tasks          FollowUpTask[]
+  narratives     AdvisorNarrative[]
+  reviewDeliveries ReviewDelivery[]
   auditLogs      AuditLog[]
   drafts         IntakeDraft?
   @@index([advisorId, status, submittedAt])
@@ -371,6 +377,8 @@ model Scenario {
   encryptedOverrides String      @db.LongText
   isBase          Boolean        @default(false)
   status          ScenarioStatus @default(DRAFT)
+  revision        Int            @default(1)
+  updatedAt       DateTime       @updatedAt
   createdAt       DateTime       @default(now())
   client          Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
   analysisResults AnalysisResult[]
@@ -399,7 +407,13 @@ model Recommendation {
   encryptedContent String              @db.LongText
   status          RecommendationStatus @default(PROPOSED)
   sortOrder       Int                  @default(0)
+  scenarioId      String?              @db.VarChar(191)
+  sourceAnalysisId String?             @db.VarChar(191)
+  revision        Int                  @default(1)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
   client          Client               @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  @@unique([clientId, scenarioId, ruleId])
 }
 model Report {
   id              String   @id @default(cuid())
@@ -426,6 +440,8 @@ model Note {
   clientId        String
   encryptedBody   String   @db.LongText
   createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  revision        Int      @default(1)
   client          Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
 }
 model FollowUpTask {
@@ -434,7 +450,34 @@ model FollowUpTask {
   encryptedContent String  @db.LongText
   dueAt           DateTime?
   completedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  revision        Int      @default(1)
   client          Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+model AdvisorNarrative {
+  id              String   @id @default(cuid())
+  clientId        String
+  scenarioId      String   @db.VarChar(191)
+  sourceAnalysisId String  @db.VarChar(191)
+  encryptedContent String @db.LongText
+  approvedAt      DateTime?
+  revision        Int      @default(1)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  client          Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  @@unique([clientId, scenarioId])
+}
+model ReviewDelivery {
+  id              String   @id @default(cuid())
+  clientId        String
+  reviewDate      DateTime
+  kind            String   @db.VarChar(32)
+  outboxId        String?  @db.VarChar(191)
+  draftId         String?  @db.VarChar(191)
+  requestedAt     DateTime @default(now())
+  client          Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  @@unique([clientId, reviewDate, kind])
 }
 model AssumptionYear {
   id              String   @id @default(cuid())

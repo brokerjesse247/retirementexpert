@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
     assertProductionIntakeAllowed();
     const context = await requireDraft(request);
     if (context.draft.submittedAt) throw new ApiError(409, 'This intake has already been submitted.');
+    if (context.draft.originClientId) throw new ApiError(422, 'Your existing SSA document is retained. Contact your advisor if it needs updating.');
     const advertisedLength = Number(request.headers.get('content-length') ?? '0');
     if (Number.isFinite(advertisedLength) && advertisedLength > MAX_UPLOAD_BYTES + 64 * 1024) throw new ApiError(413, 'Upload is too large.');
     await enforceRateLimit('intake-upload-ip', clientRateLimitKey(request), 12, 60 * 60_000);

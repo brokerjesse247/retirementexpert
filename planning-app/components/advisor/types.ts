@@ -18,6 +18,9 @@ export type ClientSummary = {
   updatedAt: string | null;
   investableAssets?: number | null;
   nextReviewDate?: string | null;
+  readinessScore?: number | null;
+  successPercent?: number | null;
+  analysisStale?: boolean;
 };
 
 export type ClientDetailResponse = {

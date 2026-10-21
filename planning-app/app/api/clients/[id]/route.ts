@@ -31,8 +31,11 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     requireCsrf(session.csrfToken, body.csrfToken);
     const { id } = await context.params;
     const revision = typeof body.revision === 'number' && Number.isInteger(body.revision) ? body.revision : -1;
-    const status = typeof body.status === 'string' ? clientStatus(body.status) : undefined;
+    const existing = await owned(id, session.advisor.id);
+    if (!existing) throw new ApiError(404, 'Client not found.');
+    const status = typeof body.status === 'string' ? (body.status === existing.status ? existing.status : clientStatus(body.status)) : undefined;
     if (!status) throw new ApiError(400, 'Invalid client status.');
+    if (status !== existing.status && ['REPORT_GENERATED', 'PRESENTED', 'IMPLEMENTING'].includes(status)) throw new ApiError(422, 'Use Reports or Annual review to record generation, presentation or implementation.');
     const parsed = intakeSchema.safeParse(body.data);
     if (!parsed.success) throw new ApiError(422, 'Please correct the highlighted fields.', fields(parsed.error.issues));
     const data = parsed.data as IntakeData;

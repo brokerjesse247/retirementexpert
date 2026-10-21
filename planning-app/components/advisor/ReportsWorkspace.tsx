@@ -17,7 +17,7 @@ type ReportRow = {
   checksum: string | null;
   retainUntil?: string | null;
 };
-type ReportsResponse = { reports: ReportRow[]; sections: ReportSection[]; branding: Branding; csrfToken: string };
+type ReportsResponse = { reports: ReportRow[]; sections: ReportSection[]; branding: Branding; csrfToken: string; scenarios?: Array<{ id: string; name: string; isBase: boolean }> };
 
 function requestKey(): string {
   const uuid = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -54,6 +54,10 @@ export function ReportsWorkspace({ clientId, revision }: { clientId: string; rev
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [scenarioId, setScenarioId] = useState("");
+  const [comparisonIds, setComparisonIds] = useState<string[]>([]);
+  const [showLsrtHelp, setShowLsrtHelp] = useState(false);
+  const [useApprovedNarrative, setUseApprovedNarrative] = useState(false);
 
   async function load() {
     setLoading(true); setError("");
@@ -64,6 +68,8 @@ export function ReportsWorkspace({ clientId, revision }: { clientId: string; rev
       setData(body);
       setSections((current) => current.length ? current.filter((id) => body.sections.some((section) => section.id === id)) : body.sections.map((section) => section.id));
       setLetter((current) => current || body.branding.letter || "");
+      setScenarioId(current => body.scenarios?.some(s => s.id === current) ? current : body.scenarios?.find(s => s.isBase)?.id ?? "");
+      setComparisonIds(current => current.filter(id => body.scenarios?.some(s => s.id === id)));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Report history is unavailable. Try again.");
     } finally { setLoading(false); }
@@ -78,13 +84,13 @@ export function ReportsWorkspace({ clientId, revision }: { clientId: string; rev
     if (!data) return;
     setError(""); setNotice("");
     if (!sections.length) { setError("Select at least one report section before generating."); return; }
-    if (letter.trim().length < 30 || letter.trim().length > 5000) { setError("The editable advisor letter must be between 30 and 5,000 characters."); return; }
+    if (!useApprovedNarrative && (letter.trim().length < 30 || letter.trim().length > 5000)) { setError("The editable advisor letter must be between 30 and 5,000 characters."); return; }
     if (!letterApproved) { setError("Confirm that you approve the editable advisor letter before generating a report."); return; }
     setGenerating(true);
     try {
       const response = await fetch(`/api/clients/${encodeURIComponent(clientId)}/reports`, {
         method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ requestKey: requestKey(), sections, coverNote, letter, letterApproved: true, revision, csrfToken: data.csrfToken }),
+        body: JSON.stringify({ requestKey: requestKey(), sections, coverNote, letter: useApprovedNarrative ? "Current approved narrative requested for this scenario." : letter, letterApproved: true, revision, csrfToken: data.csrfToken, ...(scenarioId ? { scenarioId } : {}), comparisonIds, showLsrtHelp, useApprovedNarrative }),
       });
       if (response.status === 409) throw new Error("The client record changed elsewhere. Refresh the client workspace before creating a report.");
       if (!response.ok) throw await errorFor(response, "The report could not be queued.");
@@ -134,10 +140,15 @@ export function ReportsWorkspace({ clientId, revision }: { clientId: string; rev
     {(error || notice) && <p className={error ? "error-banner" : "notice"} role={error ? "alert" : "status"}>{error || notice}</p>}
 
     <section className="card report-builder"><p className="eyebrow">New immutable version</p><h3>Prepare a client report</h3><p className="muted">Changing the selections or letter today does not alter any saved prior report version. No delivery or email action is included here.</p>
+      <label className="field"><span>Scenario to report</span><select className="input" value={scenarioId} onChange={event => { setScenarioId(event.target.value); setLetterApproved(false); setUseApprovedNarrative(false); }}>{data.scenarios?.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+      <fieldset><legend>Optional scenario comparison (up to three)</legend><div className="option-list">{data.scenarios?.map(s => <label className="checkbox-label" key={s.id}><input type="checkbox" checked={comparisonIds.includes(s.id)} disabled={!comparisonIds.includes(s.id) && comparisonIds.length >= 3} onChange={event => setComparisonIds(current => event.target.checked ? [...current, s.id] : current.filter(id => id !== s.id))} />{s.name}</label>)}</div></fieldset>
+      <label className="checkbox-label"><input type="checkbox" checked={showLsrtHelp} onChange={event => setShowLsrtHelp(event.target.checked)} />Include educational “How LSRT can help” wording on eligible approved actions.</label>
+      <label className="checkbox-label"><input type="checkbox" checked={useApprovedNarrative} onChange={event => { setUseApprovedNarrative(event.target.checked); setLetterApproved(false); }} />Use the current approved letter and section explanations from the Narrative tab for this scenario.</label>
+      <p className="muted">Only approved actions and text matching the selected current analysis enter this report. Draft, edited, removed or stale approvals are excluded.</p>
       <fieldset className="report-section-picker"><legend>Included report sections</legend><div className="option-list">{data.sections.map((section) => <label className="checkbox-label" key={section.id}><input type="checkbox" checked={sections.includes(section.id)} onChange={() => toggleSection(section.id)} />{section.label}</label>)}</div></fieldset>
       <label className="field"><span className="field-label">Cover note <small>(optional, up to 500 characters)</small></span><textarea className="input" rows={3} maxLength={500} value={coverNote} onChange={(event) => setCoverNote(event.target.value)} /></label>
-      <label className="field"><span className="field-label">Editable advisor letter</span><textarea className="input" rows={10} minLength={30} maxLength={5000} value={letter} onChange={(event) => setLetter(event.target.value)} required /><small>{letter.trim().length} / 5,000 characters. This letter is saved into the generated report snapshot, not automatically emailed.</small></label>
-      <label className="checkbox-label report-approval"><input type="checkbox" checked={letterApproved} onChange={(event) => setLetterApproved(event.target.checked)} />I have reviewed and explicitly approve this editable advisor letter for this report.</label>
+      {!useApprovedNarrative && <label className="field"><span className="field-label">Editable advisor letter</span><textarea className="input" rows={10} minLength={30} maxLength={5000} value={letter} onChange={(event) => { setLetter(event.target.value); setLetterApproved(false); }} required /><small>{letter.trim().length} / 5,000 characters. This letter is saved into the generated report snapshot, not automatically emailed.</small></label>}
+      <label className="checkbox-label report-approval"><input type="checkbox" checked={letterApproved} onChange={(event) => setLetterApproved(event.target.checked)} />I have reviewed and approve the selected letter for this report, including the Narrative-tab letter if that option is selected.</label>
       <div className="form-actions"><button className="button button-primary" type="button" onClick={() => void generate()} disabled={generating || !letterApproved}><FileText aria-hidden="true" />{generating ? "Generating…" : "Generate private report"}</button><span className="muted">No automatic emails. Ready reports remain private until downloaded by an authenticated advisor.</span></div>
     </section>
 

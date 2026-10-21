@@ -9,6 +9,7 @@ import { intakeIdentity, normalizedIntake } from '@/lib/services/normalize';
 import { queueEmail } from '@/lib/services/email';
 import { enforceRateLimit } from '@/lib/auth/rate-limit';
 import { assertProductionIntakeAllowed } from '@/lib/operations/status';
+import { submitAnnualUpdate } from '@/lib/annual-review/submission';
 
 function validationFields(issues: Array<{ path: (string | number)[]; message: string }>) {
   const fields: Record<string, string> = {};
@@ -39,8 +40,10 @@ export async function POST(request: NextRequest) {
     const checked = intakeSchema.safeParse(body.data);
     if (!checked.success) throw new ApiError(422, 'Please correct the highlighted fields.', validationFields(checked.error.issues));
     const data = checked.data as IntakeData;
-    const advisor = await intakeAdvisor();
+    const advisor = context.draft.originAdvisorId ? await db.advisor.findUnique({ where: { id: context.draft.originAdvisorId }, select: { id: true, email: true, name: true } }) : await intakeAdvisor();
+    if (!advisor) throw new ApiError(410, 'The advisor for this update is no longer available.');
 
+    if (context.draft.submittedAt && context.draft.originClientId) return noStore(NextResponse.json({ ok: true, clientId: context.draft.originClientId, annualUpdate: true, emailDelivery: 'queued' }));
     if (context.draft.submittedAt && context.draft.clientId) return noStore(NextResponse.json({ ok: true, clientId: context.draft.clientId, emailDelivery: 'queued' }));
     if (context.draft.submittedAt) throw new ApiError(409, 'This intake is still being finalized. Please try again.');
 
@@ -49,9 +52,16 @@ export async function POST(request: NextRequest) {
       if (!claimed.count) {
         const latest = await tx.intakeDraft.findUnique({ where: { id: context.draft.id } });
         if (latest?.clientId) return { clientId: latest.clientId, duplicate: true };
+        if (latest?.submittedAt && latest.originClientId) return { clientId: latest.originClientId, duplicate: true };
         throw new ApiError(409, 'This draft was updated elsewhere. Reload and try again.');
       }
       await tx.draftAccessGrant.updateMany({ where: { draftId: context.draft.id, revokedAt: null }, data: { revokedAt: new Date() } });
+      if (context.draft.originClientId) {
+        const updated = await submitAnnualUpdate(tx, context, data);
+        await queueEmail({ to: advisor.email, displayName: 'LSRT Insurance', subject: 'Annual retirement information updated', text: 'A client submitted their annual information update. Sign in to review the existing client record.', html: '<p>A client submitted their annual information update. Sign in to review the existing client record.</p>' }, 'ADVISOR_ANNUAL_UPDATE_RECEIVED', advisor.id, tx);
+        await queueEmail({ to: data.email, displayName: 'LSRT Insurance', subject: 'We received your annual information update', text: 'Your updated information is saved for advisor review. Prior reports remain unchanged.', html: '<p>Your updated information is saved for advisor review. Prior reports remain unchanged.</p>' }, 'CLIENT_ANNUAL_UPDATE_CONFIRMATION', advisor.id, tx);
+        return updated;
+      }
       const identity = intakeIdentity(data);
       const client = await tx.client.create({ data: { advisorId: advisor.id, status: ClientStatus.NEW, ...identity, encryptedData: encryptJson(data), submittedAt: new Date() } });
       await tx.client.update({ where: { id: client.id }, data: normalizedIntake(data) });
@@ -66,6 +76,6 @@ export async function POST(request: NextRequest) {
       await queueEmail({ to: data.email, displayName: 'LSRT Insurance', subject: 'We received your retirement intake', text: 'Thank you. Your advisor will review your retirement intake.', html: '<p>Thank you. Your advisor will review your retirement intake.</p>' }, 'CLIENT_INTAKE_CONFIRMATION', advisor.id, tx);
       return { clientId: client.id, duplicate: false };
     });
-    return noStore(NextResponse.json({ ok: true, clientId: result.clientId, emailDelivery: 'queued' }));
+    return noStore(NextResponse.json({ ok: true, clientId: result.clientId, annualUpdate: Boolean(context.draft.originClientId), emailDelivery: 'queued' }));
   } catch (error) { return errorResponse(error); }
 }

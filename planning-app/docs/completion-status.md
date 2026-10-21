@@ -1,35 +1,35 @@
 # RetirementExpert completion status
 
-Updated October 20, 2026. The existing blue retirementexpert.si website is preserved. The planning app is still in development Preview, not accessible through the regular website yet.
+Updated October 21, 2026. The existing blue retirementexpert.si website is preserved. The planning app is in development Preview; no production publication, DNS change or homepage alteration was performed.
 
-## What is connected
+## Connected advisor features
 
-A submitted client can be opened in the advisor workspace. The Analysis tab runs the retirement modules using versioned SSA/IRS/CMS annual assumptions and a reproducible 5,000-run Monte Carlo simulation. Unknown inputs and unsupported cases are identified for advisor review.
+Submitted clients have sourced retirement analysis and private blue-branded PDF reports. Recommendations evaluates all R01–R25 rules, identifies unavailable facts and supports explicit approve/edit/remove/custom actions. No proposal becomes client advice automatically. Relevant income, tax-free planning, long-term-care, life-insurance and estate/legacy review flags show supporting evidence.
 
-The Reports tab supports report-section selection, an editable advisor letter with explicit approval, personalized blue-branded PDF generation, saved immutable versions and private downloads. Generating a report does not email it or mark it as sent.
+Scenarios saves independent alternatives and compares up to three without rewriting the submitted profile. Supported what-ifs include claiming/retirement ages, spending, returns/inflation, Roth schedules, account balances, supplied LTC events and supplied hypothetical annuity income. Assumptions and unknown tax treatment remain explicit; these are not product quotes.
 
-Advisor Settings includes report branding, mandatory disclosures, editable planning/annual assumptions and a redacted operations status panel. Login remains email/password only, as requested, with the existing eight-character minimum and no authenticator.
+Notes & tasks provides encrypted timestamped notes, archival, due dates, ownership and complete/reopen actions. Narrative builds client-specific numeric-validated templates, allows edits and requires approval. Optional provider-assisted AI is disabled until credentials, model and data-sharing approval are configured. Recommendation changes clear dependent narrative approval.
+
+Reports can select a saved scenario, an optional comparison, matching approved narrative and approved actions. “How LSRT can help” wording requires an explicit report option. Saved snapshots and PDFs never change after later edits. The baseline full report is 22 pages; additional approved content may require continuation pages rather than clipping. Generating/downloading does not send a report or mark it presented.
+
+Annual review explicitly records presentation of a ready report, sets the one-year review date and supports the implementing status. The signed application dispatcher can queue a deduplicated advisor reminder thirty days before review when enabled. An advisor-requested prefilled annual questionnaire uses a one-use, expiring grant and renewed consent; it updates the same client while preserving old reports and existing private SSA documents. Queued email is not delivered email.
+
+Advisor Settings includes branding, disclosures, annual/planning assumptions, safe editable annual email templates and redacted operations status. Password-only login and the eight-character minimum remain unchanged.
 
 ## How to try it
 
-1. In Manus Preview, use `/login` and sign in with the existing advisor credentials.
-2. Open **Clients**, then choose a successfully submitted fictional client.
-3. Choose **Analysis** to inspect the model, sources, warnings and optional planning clarifications.
-4. Choose **Reports**, select sections, review the advisor letter, check its approval box and generate the PDF.
-5. Wait for Ready, then download the saved version. The report is not automatically sent.
+In Manus **Preview**, sign in, select **Clients** and open a successfully submitted fictional client. Use the Recommendations, Scenarios, Notes & tasks, Narrative, Reports and Annual review tabs. Review and approve actions and narrative before generating an enriched report. See `docs/advisor-feature-help.md` for the detailed flow. Do not submit real financial or health information before production launch protections are approved.
 
-A saved incomplete draft is not a dashboard client. Required intake answers and consent must pass before submission succeeds. Use fictional data until launch protections are approved.
+## Evidence
 
-## Verified so far
+The dedicated test database exercises twenty-eight real protected API checks through password login, submission, analyses, private reports and the advisor workflow. A synthetic full report with twenty-five approved actions, next steps, explanations and comparison passed real Chromium overflow checks and complete footer/source/warning inspection across thirty-one pages. Read-only integration review found no confirmed meaningful ownership, CSRF, revision or annual-update safety issue. The full module/security suite passed 237 tests across 46 files; the dedicated API harness passed 28 checks. The final Next.js production build also passed. No fake test clients were inserted into Preview and no provider email was sent.
 
-TypeScript checks and 197 module/security tests across 34 files pass. Twenty isolated integration checks exercised actual password login, intake submission, advisor edits, analysis caching, approved PDF generation, encrypted storage, private downloads and immutable history, including simultaneous cold-cache recalculation. The full default PDF has 22 Letter pages, complete citations/warnings and disclaimers on every page; actual Chromium overflow checks and focused appendix inspection passed. An authenticated encrypted MariaDB backup was successfully restored to a separate test database; tables and a synthetic marker matched. Test fixtures were kept out of the live advisor database and no provider email was sent.
+## Still needed for production
 
-## What is not complete
+The existing Hostinger KVM 2 is the intended later application host. Its services must be inspected safely before installing/deploying the isolated portal. Production database, Chromium, private storage, HTTPS, encrypted off-host backups with a restore drill, scheduler, verified LSRT mail sending and retention/compliance approval still need activation. Do not reset/reinstall the VPS or disturb existing services.
 
-Actual production transactional email is not verified: the authorized Mail API credential is unavailable, and sender verification/dispatch remain held. Production Node.js/Chromium runtime, planning database/environment, scheduler, encrypted off-host backups, production restore evidence and retention/compliance approval still need activation on Hostinger.
+After those checks, the approved planning subdomain and homepage links can be connected in an explicitly authorized launch step. Production intake remains fail-closed until its security/compliance gates are approved. This development completion does not authorize a purchase, DNS cutover, actual reminder delivery or emailing client reports.
 
-The existing homepage’s daily Hostinger backup does not prove coverage for the new planning database, private reports or encryption keys. FTP upload into the existing static public_html folder is not enough to run this server application. The compatible Hostinger runtime and transfer/start procedure must be settled without replacing the homepage.
+## Source boundary
 
-Production intake is deliberately blocked until privacy, storage, encryption, retention, legal-hold, restore and runtime gates are approved. Domain linking and a homepage button remain a separate launch action. No publishing, homepage changes, DNS/domain cutover, purchases or client report emails were performed.
-
-Later-phase recommendation approval, notes/tasks, multi-scenario comparison and optional AI narrative are not included in this calculation/report delivery.
+Jesse confirmed this project stays in `brokerjesse247/retirementexpert` on `platform`. Do not mix it into mysscoach or push these application changes to the live homepage main branch. Manus checkpoint storage is separate and does not publish this site.

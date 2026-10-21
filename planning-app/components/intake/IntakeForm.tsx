@@ -29,6 +29,7 @@ type DraftResponse = {
   revision: number;
   submitted: boolean;
   csrfToken: string;
+  annualUpdate?: boolean;
 };
 
 type UploadMeta = { id: string; name: string; size: number } | null;
@@ -212,6 +213,7 @@ export function IntakeForm() {
   const [submitting, setSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState('');
   const [ready, setReady] = useState(false);
+  const [annualUpdate, setAnnualUpdate] = useState(false);
 
   const dataRef = useRef(data);
   const stepRef = useRef(step);
@@ -268,6 +270,7 @@ export function IntakeForm() {
       setStep(stepRef.current);
       setRevision(revisionRef.current);
       setCsrfToken(csrfRef.current);
+      setAnnualUpdate(Boolean(draft.annualUpdate));
       readyRef.current = true;
       setReady(true);
       setSaveState('saved');
@@ -597,6 +600,7 @@ export function IntakeForm() {
     </section>
 
     <form onSubmit={submit} noValidate>
+      {annualUpdate && <p className="notice">Annual information update: review your previous answers before submitting. Consent is required again. Your existing SSA document and prior reports are retained.</p>}
       <section className="card intake-card">
         <p className="eyebrow">Step {step}</p>
         <h2 className="section-title">{currentStep.title}</h2>
@@ -607,7 +611,7 @@ export function IntakeForm() {
         {step === 2 ? <IncomeStep data={data} errors={displayErrors} married={married} onChange={update} /> : null}
         {step === 3 ? <SavingsStep data={data} errors={displayErrors} married={married} onChange={update} /> : null}
         {step === 4 ? <ExpensesStep data={data} errors={displayErrors} onChange={update} mutate={mutate} /> : null}
-        {step === 5 ? <SocialSecurityStep data={data} errors={displayErrors} married={married} onChange={update} upload={upload} uploading={uploading} onUpload={uploadSsa} /> : null}
+        {step === 5 ? <SocialSecurityStep data={data} errors={displayErrors} married={married} onChange={update} upload={upload} uploading={uploading} onUpload={uploadSsa} annualUpdate={annualUpdate} /> : null}
         {step === 6 ? <GoalsStep data={data} errors={displayErrors} married={married} onChange={update} mutate={mutate} /> : null}
         {step === 7 ? <HealthStep data={data} errors={displayErrors} married={married} onChange={update} mutate={mutate} /> : null}
         {step === 8 ? <EstateReviewStep data={data} errors={displayErrors} onChange={update} onEdit={goToStep} /> : null}
@@ -743,8 +747,8 @@ function SocialSecurityPerson({ data, errors, owner, onChange }: { data: IntakeD
   </div></PersonHeading>;
 }
 
-function SocialSecurityStep({ data, errors, married, onChange, upload, uploading, onUpload }: { data: IntakeData; errors: Record<string, string>; married: boolean; onChange: (path: string, value: string | boolean) => void; upload: UploadMeta; uploading: boolean; onUpload: (file: File | undefined) => Promise<void> }) {
-  return <><SocialSecurityPerson data={data} errors={errors} owner="primary" onChange={onChange} />{married ? <SocialSecurityPerson data={data} errors={errors} owner="spouse" onChange={onChange} /> : null}<section className="card"><h3>SSA statement (optional)</h3><p id="ssa-upload-help" className="notice"><strong>Development preview — fictional PDF only.</strong> Do not upload a real Social Security statement, account number, or other personal information until release.</p><label className="field-label" htmlFor="ssa-upload">Choose a fictional PDF statement</label><input id="ssa-upload" className="input" type="file" accept="application/pdf,.pdf" aria-describedby="ssa-upload-help ssa-upload-error" onChange={(event) => void onUpload(event.target.files?.[0])} disabled={uploading} />{uploading ? <p className="muted">Uploading securely…</p> : null}{upload ? <p className="pill">Attached: {upload.name} ({Math.ceil(upload.size / 1024)} KB)</p> : null}{errors.ssaUploadId ? <p id="ssa-upload-error" className="error">{errors.ssaUploadId}</p> : null}</section></>;
+function SocialSecurityStep({ data, errors, married, onChange, upload, uploading, onUpload, annualUpdate }: { data: IntakeData; errors: Record<string, string>; married: boolean; onChange: (path: string, value: string | boolean) => void; upload: UploadMeta; uploading: boolean; onUpload: (file: File | undefined) => Promise<void>; annualUpdate?: boolean }) {
+  return <><SocialSecurityPerson data={data} errors={errors} owner="primary" onChange={onChange} />{married ? <SocialSecurityPerson data={data} errors={errors} owner="spouse" onChange={onChange} /> : null}{annualUpdate ? <section className="card"><h3>SSA statement</h3><p className="muted">Your existing statement is retained privately. Contact your advisor if the document needs updating.</p></section> : <section className="card"><h3>SSA statement (optional)</h3><p id="ssa-upload-help" className="notice"><strong>Development preview — fictional PDF only.</strong> Do not upload a real Social Security statement, account number, or other personal information until release.</p><label className="field-label" htmlFor="ssa-upload">Choose a fictional PDF statement</label><input id="ssa-upload" className="input" type="file" accept="application/pdf,.pdf" aria-describedby="ssa-upload-help ssa-upload-error" onChange={(event) => void onUpload(event.target.files?.[0])} disabled={uploading} />{uploading ? <p className="muted">Uploading securely…</p> : null}{upload ? <p className="pill">Attached: {upload.name} ({Math.ceil(upload.size / 1024)} KB)</p> : null}{errors.ssaUploadId ? <p id="ssa-upload-error" className="error">{errors.ssaUploadId}</p> : null}</section>}</>;
 }
 
 function GoalsStep({ data, errors, married, onChange, mutate }: { data: IntakeData; errors: Record<string, string>; married: boolean; onChange: (path: string, value: string | boolean) => void; mutate: (callback: (draft: Record<string, unknown>) => void) => void }) {

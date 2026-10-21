@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ReportRenderInput } from '../lib/calculations/types';
+import type { AdvisorReportInput } from '../lib/reports/advisor-types';
 import { REPORT_SECTION_OPTIONS, renderReportHtml, summarizeReportWarnings } from '../lib/reports/render';
 
 function fixture(overrides: Partial<ReportRenderInput> = {}): ReportRenderInput {
@@ -100,5 +101,23 @@ describe('retirement report renderer', () => {
     expect(summaries.map(item => item.message).join(' ')).toContain('2035: $38315.38; 2036: $39770.23');
     expect(summaries.map(item => item.message).join(' ')).toContain('2027–2028');
     expect(summaries.flatMap(item => item.sourceWarnings).sort()).toEqual([...warnings].sort());
+  });
+  it('paginates every approved action and preserves next steps and explicit help opt-in', () => {
+    const input = fixture({ sections: ['action-plan'] }) as AdvisorReportInput;
+    input.approvedRecommendations = Array.from({ length: 25 }, (_, i) => ({ title: `Action ${i}`, body: `Approved body ${i}.`, priority: 'HIGH', owner: 'Advisor', nextStep: `Next ${i}`, targetDate: '2027-01-01', dollarImpact: 1200, lsrtHelp: 'Discuss insurance options without a product guarantee.' }));
+    let html = renderReportHtml(input);
+    expect((html.match(/data-section="action-plan/g) ?? []).length).toBeGreaterThan(2);
+    for (let i = 0; i < 25; i++) { expect(html).toContain(`Approved body ${i}.`); expect(html).toContain(`Next step: Next ${i}`); }
+    expect(html).not.toContain('Discuss insurance options');
+    input.showLsrtHelp = true; html = renderReportHtml(input);
+    expect(html).toContain('How LSRT can help'); expect(html).toContain('$1,200.00');
+  });
+  it('includes only supplied approved explanations and explicit percentage-point scenario comparisons', () => {
+    const input = fixture({ sections: ['net-worth'] }) as AdvisorReportInput;
+    input.approvedNarrative = { letter: 'Approved letter.', sections: { 'net-worth': 'Approved <script>text</script>. Review it together.' } };
+    input.scenarioComparison = [{ id: 'base', name: '<Base>', successPercent: .5, lifetimeTax: 1200, medianLegacy: null, retirementIncomeAnnual: 60000 }];
+    const html = renderReportHtml(input);
+    expect(html).toContain('Advisor-reviewed explanation'); expect(html).toContain('&lt;script&gt;text&lt;/script&gt;');
+    expect(html).toContain('Scenario comparison'); expect(html).toContain('&lt;Base&gt;'); expect(html).toContain('0.5%'); expect(html).toContain('Unavailable');
   });
 });

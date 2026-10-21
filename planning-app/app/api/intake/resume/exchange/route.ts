@@ -18,6 +18,11 @@ export async function POST(request: NextRequest) {
     const newToken = randomToken();
     const consumed = await db.$transaction(async (tx: Prisma.TransactionClient) => {
       const now = new Date();
+      const source = await tx.intakeDraft.findUnique({ where: { id: grant.draftId } });
+      if (source?.originClientId) {
+        if (!source.updateExpiresAt || source.updateExpiresAt <= now) return false;
+        if (!await tx.client.findFirst({ where: { id: source.originClientId, advisorId: source.originAdvisorId ?? '', status: { not: 'ARCHIVED' } }, select: { id: true } })) return false;
+      }
       const claim = await tx.draftAccessGrant.updateMany({ where: { id: grant.id, usedAt: null, revokedAt: null, expiresAt: { gt: now } }, data: { usedAt: now } });
       if (!claim.count) return false;
       // `submittedAt: null` prevents a stale link from restoring a submitted

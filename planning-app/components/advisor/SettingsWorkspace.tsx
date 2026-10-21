@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { responseMessage } from "./api";
 import { OperationsStatusPanel } from "./OperationsStatusPanel";
 import { PlanningSettings } from "./PlanningSettings";
+import { EmailTemplateSettings } from "./EmailTemplateSettings";
 
 type SettingsResponse = { advisor: { name: string; email: string; phone: string | null; licenseNumbers: string | null }; csrfToken: string; authMode: "PASSWORD" };
 
@@ -60,6 +61,7 @@ export function SettingsWorkspace() {
         </section>
       </div>
       <PlanningSettings />
+      <EmailTemplateSettings />
       <OperationsStatusPanel />
     </section>
   );
