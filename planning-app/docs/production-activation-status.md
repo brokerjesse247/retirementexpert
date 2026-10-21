@@ -17,3 +17,5 @@ Production readiness now depends on a real read-only database/replay-constraint 
 3. On the actual Hostinger runtime, configure private database/storage, HTTPS, Chromium, encrypted off-host backup and an isolated restore drill, durable signed scheduling, key custody and the owner-approved retention/legal-hold/compliance policy. Keep real intake closed until verified.
 
 A production activation request is not proof that safeguards exist. Live delivery and real-client intake remain held until these blockers are resolved. The existing blue website is unchanged.
+
+Temporary access cleanup: only the retireplan-activation-20261021 key was removed before pausing for the missing mail credential. Pre-existing authorized-key lines and all existing application services were preserved. No broad Hostinger key-removal operation was used.

@@ -22,3 +22,5 @@ The daily encrypted backup timer is installed but remains disabled pending reten
 These are verified native prerequisites, not a public production launch. Only this task-specific SSH key is removed when pausing or finishing server work; existing access remains intact.
 
 Local final verification: TypeScript passed and 250 tests across 49 files passed. Native Hostinger build/browser/scheduler/database checks are separate evidence.
+
+Temporary access cleanup: only the retireplan-activation-20261021 key was removed before pausing for the missing mail credential. Pre-existing authorized-key lines and all existing application services were preserved. No broad Hostinger key-removal operation was used.
