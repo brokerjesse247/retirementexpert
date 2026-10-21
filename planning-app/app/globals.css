@@ -21,3 +21,22 @@
 .step-validation-summary li { margin: 9px 0; }
 .validation-question-link { border: 0; background: transparent; color: #47B5FF; padding: 0; font: inherit; text-align: left; text-decoration: underline; cursor: pointer; }
 .intake-shell [aria-invalid="true"] { outline: 1px solid #E99090; outline-offset: 2px; }
+
+/* Live planning panels: preserve the existing blue identity. */
+.analysis-workspace,.reports-workspace,.planning-settings,.operations-status{display:grid;gap:1.5rem;padding-top:1.5rem}
+.analysis-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:1rem}
+.analysis-chart-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1.25rem}
+.analysis-kpi-grid .card,.analysis-chart-grid .card{min-width:0}
+.analysis-svg{width:100%;overflow:hidden;padding-top:.8rem}.analysis-svg svg{display:block;width:100%;height:auto}
+.analysis-warnings,.operations-blockers{border-left:3px solid #168CFF}.analysis-warnings li,.operations-blockers li{margin:.55rem 0;line-height:1.6}
+.analysis-overrides,.analysis-lineage,.report-builder,.report-history,.branding-settings,.assumptions-settings,.annual-rules-settings{min-width:0}
+.analysis-lineage dl,.operations-summary{display:grid;gap:.75rem}.analysis-lineage dd{margin:0;overflow-wrap:anywhere}
+.report-section-picker{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.75rem;padding:1rem 0}
+.report-section-picker label,.report-approval{display:flex;gap:.75rem;align-items:flex-start;line-height:1.6}
+.report-section-picker input,.report-approval input{flex:none;width:18px;height:18px;accent-color:#168CFF;margin-top:.3rem}
+.report-approval{border:1px solid #168CFF;border-radius:12px;padding:1rem;margin:1rem 0;background:rgba(22,140,255,.07)}
+.report-history{overflow-x:auto}.report-history td,.report-history th{white-space:normal;vertical-align:top}.report-history code{font-size:.72rem;overflow-wrap:anywhere}
+.assumption-sources{overflow-wrap:anywhere;line-height:1.6}.assumption-sources li{margin:.65rem 0}.planning-settings textarea{min-height:130px;resize:vertical}
+.operations-status .error,.operations-status .notice{overflow-wrap:anywhere}
+@media(max-width:650px){.analysis-chart-grid{grid-template-columns:1fr}.analysis-kpi-grid{grid-template-columns:1fr 1fr}.report-section-picker{grid-template-columns:1fr}}
+@media(max-width:420px){.analysis-kpi-grid{grid-template-columns:1fr}}

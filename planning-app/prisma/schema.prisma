@@ -59,6 +59,12 @@ enum ScenarioStatus {
   DRAFT
   ARCHIVED
 }
+enum ReportBuildStatus {
+  QUEUED
+  GENERATING
+  READY
+  FAILED
+}
 enum RecommendationStatus {
   PROPOSED
   APPROVED
@@ -76,6 +82,7 @@ model Advisor {
   totpSecretEncrypted   String?  @db.LongText
   recoveryCodeHashes    String?  @db.LongText
   totpEnabledAt         DateTime?
+  reportSettingsEncrypted String? @db.LongText
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
   sessions              AdvisorSession[]
@@ -181,6 +188,7 @@ model Client {
   nextReviewDate DateTime?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+  retentionHold  Boolean      @default(false)
   advisor        Advisor      @relation(fields: [advisorId], references: [id], onDelete: Restrict)
   persons        Person[]
   accounts       Account[]
@@ -372,10 +380,15 @@ model AnalysisResult {
   scenarioId      String
   engineVersion   String   @db.VarChar(64)
   assumptionsYear Int
+  inputRevision   Int      @default(1)
+  assumptionsVersion String @default("legacy") @db.VarChar(80)
+  snapshotChecksum String? @db.Char(64)
+  cacheKey        String?  @db.Char(64)
   encryptedSnapshot String @db.LongText
   createdAt       DateTime @default(now())
   scenario        Scenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
   reports         Report[]
+  @@unique([scenarioId, cacheKey])
 }
 model Recommendation {
   id              String               @id @default(cuid())
@@ -395,6 +408,13 @@ model Report {
   version         Int
   encryptedSnapshot String @db.LongText
   checksum        String?  @db.Char(64)
+  requestKey      String?  @unique @db.Char(64)
+  status          ReportBuildStatus @default(QUEUED)
+  encryptedPdf    Bytes?   @db.LongBlob
+  errorCode       String?  @db.VarChar(80)
+  buildStartedAt  DateTime?
+  completedAt     DateTime?
+  retainUntil     DateTime?
   generatedAt     DateTime @default(now())
   sentAt          DateTime?
   client          Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
@@ -418,10 +438,17 @@ model FollowUpTask {
 }
 model AssumptionYear {
   id              String   @id @default(cuid())
+  advisorId       String?  @db.VarChar(191)
   year            Int
   key             String   @db.VarChar(120)
   encryptedValue  String   @db.LongText
   sourceUrl       String?  @db.VarChar(2048)
   verifiedAt      DateTime?
-  @@unique([year, key])
+  @@unique([advisorId, year, key])
+}
+
+model OperationsReplayNonce {
+  fingerprint String   @id @db.Char(64)
+  expiresAt   DateTime
+  @@index([expiresAt])
 }

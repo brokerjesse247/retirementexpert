@@ -8,6 +8,7 @@ import { requireDraft } from '@/lib/services/drafts';
 import { intakeIdentity, normalizedIntake } from '@/lib/services/normalize';
 import { queueEmail } from '@/lib/services/email';
 import { enforceRateLimit } from '@/lib/auth/rate-limit';
+import { assertProductionIntakeAllowed } from '@/lib/operations/status';
 
 function validationFields(issues: Array<{ path: (string | number)[]; message: string }>) {
   const fields: Record<string, string> = {};
@@ -26,6 +27,7 @@ async function intakeAdvisor() {
 export async function POST(request: NextRequest) {
   try {
     requireTrustedOrigin(request);
+    assertProductionIntakeAllowed();
     const context = await requireDraft(request);
     const body = await jsonBody(request);
     requireCsrf(context.draft.csrfToken, body.csrfToken);

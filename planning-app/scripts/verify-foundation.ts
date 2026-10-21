@@ -24,6 +24,11 @@ async function main(){
  const detail=await import('../app/api/clients/[id]/route');
  const {emptyIntake}=await import('../lib/intake/schema');
  const {decryptJson,decryptText,tokenHash,randomToken}=await import('../lib/auth/crypto');
+ const {clientRateLimitKey}=await import('../lib/auth/http');
+ // The guard above permits only retireplan_test. Reset the prior synthetic
+ // network quota, never production data or the application throttle policy.
+ const networkKey=clientRateLimitKey(request('/api/intake/submit')).toLowerCase();
+ await db.rateLimit.deleteMany({where:{keyHash:{in:['intake-submit-ip','intake-draft-create-ip','login-ip'].map(scope=>tokenHash(`${scope}:${networkKey}`))}}});
  const tag=crypto.randomBytes(6).toString('hex');
  const email=`fixture-${tag}@example.invalid`;
  const password=crypto.randomBytes(4).toString('hex');
@@ -82,6 +87,8 @@ async function main(){
    await json(await detail.PATCH(request('/api/clients/'+id,'PATCH',{data:profile.data,status:'IN_REVIEW',revision:profile.revision,csrfToken:me.csrfToken},ac),context));
    assert.equal((await db.client.findUniqueOrThrow({where:{id}})).status,'IN_REVIEW');
    await json(await detail.GET(request('/api/clients/missing','GET',undefined,ac),{params:Promise.resolve({id:'missing'})}),404);record('Advisor dashboard list/age and revision-aware profile editing work');
+   const {checkPlanningApis}=await import('./planning-integration-checks');
+   await checkPlanningApis({db,clientId:id,advisorId:advisor.id,cookie:ac,csrfToken:me.csrfToken,request,record});
    const active=await db.advisorSession.findUniqueOrThrow({where:{tokenHash:tokenHash(ac.split('=')[1])}});
    const before=active.expiresAt.valueOf();await session.GET(request('/api/auth/session','GET',undefined,ac));
    const after=await db.advisorSession.findUniqueOrThrow({where:{id:active.id}});assert.equal(after.expiresAt.valueOf(),before);record('Passive GET cannot extend the advisor idle timeout');
@@ -98,6 +105,7 @@ async function main(){
  }finally{
    await db.intakeDraft.deleteMany({where:{client:{advisorId:advisor.id}}});
    await db.client.deleteMany({where:{advisorId:advisor.id}});
+   await db.assumptionYear.deleteMany({where:{advisorId:advisor.id}});
    await db.advisor.delete({where:{id:advisor.id}});
    await db.$disconnect();
  }

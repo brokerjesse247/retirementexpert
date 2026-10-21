@@ -4,7 +4,9 @@ import Link from "next/link";
 import { Download, FileLock2, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { formatDate, responseMessage, statusLabel } from "./api";
+import { AnalysisWorkspace } from "./AnalysisWorkspace";
 import { ProfileEditor } from "./ProfileEditor";
+import { ReportsWorkspace } from "./ReportsWorkspace";
 import type { ClientDetailResponse, JsonRecord } from "./types";
 
 type Upload = { id: string; name: string; size: number } | null;
@@ -22,6 +24,7 @@ export function ClientDetailWorkspace({ clientId }: { clientId: string }) {
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [activeTab, setActiveTab] = useState<"profile" | "analysis" | "reports">("profile");
 
   async function load() {
     setLoading(true); setError("");
@@ -74,11 +77,21 @@ export function ClientDetailWorkspace({ clientId }: { clientId: string }) {
   if (!record || !data) return null;
   const selectableStatuses = reviewStatuses.includes(status) ? reviewStatuses : [status, ...reviewStatuses];
   return <section className="client-detail-workspace">
-    <header className="workspace-header"><div><Link className="muted back-link" href="/dashboard/clients">Clients</Link><p className="eyebrow">Client profile</p><h1>{record.client.name}</h1><p className="muted">Submitted {formatDate(record.client.submittedAt)} · Last updated {formatDate(record.client.updatedAt)}</p></div><button className="button button-primary" type="button" onClick={() => void save()} disabled={saving}><Save aria-hidden="true" />{saving ? "Saving…" : "Save changes"}</button></header>
-    <div className="profile-tabs client-tabs" role="tablist" aria-label="Client workspace"><button className="active" type="button" role="tab" aria-selected="true">Profile</button>{["Analysis · Phase 2", "Scenarios · Phase 2", "Recommendations · Phase 4", "Notes · Phase 4", "Reports · Phase 3"].map((tab) => <button key={tab} type="button" role="tab" aria-disabled="true" disabled>{tab}</button>)}</div>
-    {(error || notice) && <p className={error ? "error" : "notice"} role={error ? "alert" : "status"}>{error || notice}</p>}
-    <section className="card profile-status"><div><p className="eyebrow">Review status</p><h2 className="section-title">Manage the intake review</h2><p className="muted">Only Foundation review statuses are available here; analysis and report stages are not simulated.</p></div><label className="field"><span>Status</span><select className="input" value={status} onChange={(event) => setStatus(event.target.value)}>{selectableStatuses.map((option) => <option key={option} value={option}>{statusLabel(option)}</option>)}</select></label></section>
-    <section className="card private-upload"><div><p className="eyebrow">Private document</p><h2 className="section-title">SSA statement</h2>{upload ? <p className="muted">{upload.name} · {formatSize(upload.size)} · accessible only through an authorized, time-limited download.</p> : <p className="muted">No optional SSA statement was submitted with this intake.</p>}</div>{upload && <button className="button button-secondary" type="button" onClick={() => void downloadUpload()} disabled={downloading}><FileLock2 aria-hidden="true" /><Download aria-hidden="true" />{downloading ? "Preparing…" : "Authorized download"}</button>}</section>
-    <section className="card"><p className="eyebrow">Intake data</p><h2 className="section-title">Profile details</h2><ProfileEditor data={data} onChange={setData} /></section>
+    <header className="workspace-header"><div><Link className="muted back-link" href="/dashboard/clients">Clients</Link><p className="eyebrow">Client workspace</p><h1>{record.client.name}</h1><p className="muted">Submitted {formatDate(record.client.submittedAt)} · Last updated {formatDate(record.client.updatedAt)}</p></div>{activeTab === "profile" && <button className="button button-primary" type="button" onClick={() => void save()} disabled={saving}><Save aria-hidden="true" />{saving ? "Saving…" : "Save changes"}</button>}</header>
+    <div className="profile-tabs client-tabs" role="tablist" aria-label="Client workspace">
+      <button className={activeTab === "profile" ? "active" : ""} type="button" role="tab" aria-selected={activeTab === "profile"} onClick={() => setActiveTab("profile")}>Profile</button>
+      <button className={activeTab === "analysis" ? "active" : ""} type="button" role="tab" aria-selected={activeTab === "analysis"} onClick={() => setActiveTab("analysis")}>Analysis</button>
+      <button className={activeTab === "reports" ? "active" : ""} type="button" role="tab" aria-selected={activeTab === "reports"} onClick={() => setActiveTab("reports")}>Reports</button>
+      <button type="button" role="tab" aria-disabled="true" disabled>Recommendations (future)</button>
+      <button type="button" role="tab" aria-disabled="true" disabled>Notes (future)</button>
+    </div>
+    {activeTab === "profile" && <>
+      {(error || notice) && <p className={error ? "error" : "notice"} role={error ? "alert" : "status"}>{error || notice}</p>}
+      <section className="card profile-status"><div><p className="eyebrow">Review status</p><h2 className="section-title">Manage the intake review</h2><p className="muted">Profile editing retains the submitted intake. Analysis and reports use their own saved, authenticated workflows.</p></div><label className="field"><span>Status</span><select className="input" value={status} onChange={(event) => setStatus(event.target.value)}>{selectableStatuses.map((option) => <option key={option} value={option}>{statusLabel(option)}</option>)}</select></label></section>
+      <section className="card private-upload"><div><p className="eyebrow">Private document</p><h2 className="section-title">SSA statement</h2>{upload ? <p className="muted">{upload.name} · {formatSize(upload.size)} · accessible only through an authorized, time-limited download.</p> : <p className="muted">No optional SSA statement was submitted with this intake.</p>}</div>{upload && <button className="button button-secondary" type="button" onClick={() => void downloadUpload()} disabled={downloading}><FileLock2 aria-hidden="true" /><Download aria-hidden="true" />{downloading ? "Preparing…" : "Authorized download"}</button>}</section>
+      <section className="card"><p className="eyebrow">Intake data</p><h2 className="section-title">Profile details</h2><ProfileEditor data={data} onChange={setData} /></section>
+    </>}
+    {activeTab === "analysis" && <AnalysisWorkspace clientId={clientId} />}
+    {activeTab === "reports" && <ReportsWorkspace clientId={clientId} revision={record.revision} />}
   </section>;
 }

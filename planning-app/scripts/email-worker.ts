@@ -1,14 +1,11 @@
 import dotenv from 'dotenv';
+import { dispatchOutboxIfApproved } from '../lib/operations/jobs';
 
-dotenv.config({ path: '.env.local' });
+dotenv.config({ path: '.env.local', quiet: true });
 
 async function main() {
-  const rawLimit = Number(process.env.EMAIL_WORKER_LIMIT ?? '25');
-  const limit = Number.isInteger(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 100) : 25;
-  const { deliverDueOutbox } = await import('@/lib/services/email');
-  // A deliberate single durable pass. Invoke from host scheduler/worker infrastructure; never create a dev timer.
-  const result = await deliverDueOutbox(limit);
+  const { deliverDueOutbox } = await import('../lib/services/email');
+  const result = await dispatchOutboxIfApproved({ deliverDueOutbox });
   process.stdout.write(JSON.stringify(result) + '\n');
 }
-
-main().catch((error) => { process.stderr.write(`Email worker failed: ${error instanceof Error ? error.message : 'unknown error'}\n`); process.exitCode = 1; });
+main().catch(() => { process.stderr.write('Email worker is held or delivery could not be completed.\n'); process.exitCode = 1; });

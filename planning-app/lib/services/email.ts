@@ -1,10 +1,10 @@
 import { OutboxStatus, Prisma } from '@prisma/client';
 import { db } from '../db';
 import { decryptJson, encryptJson, tokenHash } from '../auth/crypto';
+import { HOSTINGER_MAIL_API_BASE, HOSTINGER_MAILBOX_ID } from '../operations/status';
 
-const MAILBOX_ID = 'ACa3656503d597985bc359324043d7';
-const API_BASE = 'https://api.mail.hostinger.com';
 const SENDING_LEASE_MS = 15 * 60_000;
+const SEND_TIMEOUT_MS = 10_000;
 
 export type MailPayload = { to: string; displayName: string; subject: string; text: string; html: string };
 type DbLike = Prisma.TransactionClient | typeof db;
@@ -25,13 +25,21 @@ function senderIsVerified(): boolean {
 export async function sendHostinger(payload: MailPayload): Promise<void> {
   const token = process.env.HOSTINGER_MAIL_API_TOKEN;
   if (!token || !senderIsVerified()) throw new Error('MAIL_CONFIGURATION');
-  const response = await fetch(`${API_BASE}/api/v1/mailboxes/${MAILBOX_ID}/send`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json' },
-    // Documented send fields only; never perform mailbox/inbox reads.
-    body: JSON.stringify({ to: payload.to, displayName: payload.displayName, subject: payload.subject, text: payload.text, html: payload.html }),
-  });
-  if (response.status !== 204) throw new Error(`MAIL_HTTP_${response.status}`);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), SEND_TIMEOUT_MS);
+  try {
+    const response = await fetch(`${HOSTINGER_MAIL_API_BASE}/api/v1/mailboxes/${HOSTINGER_MAILBOX_ID}/send`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json' },
+      // Documented send fields only; never perform mailbox/inbox reads.
+      body: JSON.stringify({ to: payload.to, displayName: payload.displayName, subject: payload.subject, text: payload.text, html: payload.html }),
+      signal: controller.signal,
+    });
+    // Do not infer provider acceptance from any status other than the documented 204.
+    if (response.status !== 204) throw new Error(`MAIL_HTTP_${response.status}`);
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function retryDelayMs(attempt: number) {

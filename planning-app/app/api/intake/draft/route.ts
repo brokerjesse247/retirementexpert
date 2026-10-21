@@ -6,6 +6,7 @@ import { encryptJson } from '@/lib/auth/crypto';
 import { ApiError, clientRateLimitKey, DRAFT_COOKIE, errorResponse, jsonBody, noStore, requireCsrf, requireTrustedOrigin, setSessionCookie } from '@/lib/auth/http';
 import { createDraft, draftResponse, requireDraft } from '@/lib/services/drafts';
 import { enforceRateLimit } from '@/lib/auth/rate-limit';
+import { assertProductionIntakeAllowed } from '@/lib/operations/status';
 
 function draftEmail(data: IntakeData): string | null {
   const email = typeof data.email === 'string' ? data.email.trim().toLowerCase() : '';
@@ -23,6 +24,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     requireTrustedOrigin(request);
+    assertProductionIntakeAllowed();
     // Apply this before allocation; the key is hashed by the persistent limiter.
     await enforceRateLimit('intake-draft-create-ip', clientRateLimitKey(request), 20, 60 * 60_000);
     try {
@@ -41,6 +43,7 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     requireTrustedOrigin(request);
+    assertProductionIntakeAllowed();
     const context = await requireDraft(request);
     if (context.draft.submittedAt) throw new ApiError(409, 'This intake has already been submitted.');
     const body = await jsonBody(request);

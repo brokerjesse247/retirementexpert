@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
       db.client.findMany({ where, orderBy, select: { id: true, firstName: true, lastName: true, email: true, status: true, submittedAt: true, updatedAt: true, nextReviewDate: true, persons: { where: { role: 'PRIMARY' }, select: { dob: true } } } }),
       db.client.count({ where: { advisorId: session.advisor.id, status: 'NEW', submittedAt: { gte: sevenDaysAgo } } }),
       db.client.count({ where: { advisorId: session.advisor.id, status: 'IN_REVIEW' } }),
-      db.report.count({ where: { client: { advisorId: session.advisor.id }, generatedAt: { gte: monthStart } } }),
+      db.report.count({ where: { client: { advisorId: session.advisor.id }, status: 'READY', completedAt: { gte: monthStart } } }),
       db.client.count({ where: { advisorId: session.advisor.id, nextReviewDate: { gte: now, lte: due } } }),
     ]);
     const response = NextResponse.json({

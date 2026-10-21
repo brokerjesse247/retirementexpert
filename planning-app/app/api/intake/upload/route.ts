@@ -6,6 +6,7 @@ import { ApiError, clientRateLimitKey, errorResponse, noStore, requireCsrf, requ
 import { requireDraft } from '@/lib/services/drafts';
 import { assertPdfUpload, MAX_UPLOAD_BYTES } from '@/lib/services/uploads';
 import { enforceRateLimit } from '@/lib/auth/rate-limit';
+import { assertProductionIntakeAllowed } from '@/lib/operations/status';
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,6 +19,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     requireTrustedOrigin(request);
+    assertProductionIntakeAllowed();
     const context = await requireDraft(request);
     if (context.draft.submittedAt) throw new ApiError(409, 'This intake has already been submitted.');
     const advertisedLength = Number(request.headers.get('content-length') ?? '0');

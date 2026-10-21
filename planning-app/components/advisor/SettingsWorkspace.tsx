@@ -3,6 +3,8 @@
 import { Save, ShieldCheck } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { responseMessage } from "./api";
+import { OperationsStatusPanel } from "./OperationsStatusPanel";
+import { PlanningSettings } from "./PlanningSettings";
 
 type SettingsResponse = { advisor: { name: string; email: string; phone: string | null; licenseNumbers: string | null }; csrfToken: string; authMode: "PASSWORD" };
 
@@ -57,6 +59,8 @@ export function SettingsWorkspace() {
           <p className="muted">Password-only access is less secure than two-factor access. Use a unique password, preferably 12 or more characters. Password hashing, login attempt limits, and the 30-minute idle timeout remain active.</p>
         </section>
       </div>
+      <PlanningSettings />
+      <OperationsStatusPanel />
     </section>
   );
 }
