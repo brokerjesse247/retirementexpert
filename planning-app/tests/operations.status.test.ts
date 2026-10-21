@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { SecurityConfigurationError } from '../lib/auth/crypto';
+vi.mock('../lib/operations/launch-evidence', () => ({ hasVerifiedLaunchEvidence: () => true }));
 import {
   HOSTINGER_MAILBOX_ID,
   HOSTINGER_METADATA_URL,

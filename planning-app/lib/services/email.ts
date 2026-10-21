@@ -62,6 +62,7 @@ export async function sendHostinger(payload: MailPayload): Promise<void> {
       // Documented send fields only; never perform mailbox/inbox reads.
       body: JSON.stringify({ to: [recipient], displayName: payload.displayName, subject: payload.subject, text: payload.text, html: payload.html }),
       signal: controller.signal,
+      redirect: 'error',
     });
     // Do not infer provider acceptance from any status other than the documented 204.
     if (response.status !== 204) {
@@ -75,6 +76,17 @@ export async function sendHostinger(payload: MailPayload): Promise<void> {
 
 function retryDelayMs(attempt: number) {
   return Math.min(24 * 60 * 60 * 1000, 60_000 * 2 ** Math.min(attempt, 10));
+}
+
+/** Activation approves new work only; never silently release a pre-activation queue. */
+function approvedActivationWindow(): Prisma.EmailOutboxWhereInput {
+  if (process.env.NODE_ENV !== 'production') return {};
+  const value = process.env.OUTBOX_ACTIVATED_AT;
+  const date = value ? new Date(value) : null;
+  if (!date || !Number.isFinite(date.valueOf()) || date.toISOString() !== value) {
+    throw new Error('MAIL_ACTIVATION_CONFIGURATION');
+  }
+  return { createdAt: { gte: date } };
 }
 
 /**
@@ -93,8 +105,9 @@ async function failExpiredSendingLeases(): Promise<number> {
 /** Claims and sends exactly one durable outbox message. Safe to run from a cron/process worker. */
 export async function deliverOutboxMessage(id: string): Promise<'sent' | 'retry' | 'failed' | 'skipped'> {
   const recipient = approvedMailDestination();
+  const activation = approvedActivationWindow();
   const claimed = await db.emailOutbox.updateMany({
-    where: { id, status: { in: [OutboxStatus.PENDING, OutboxStatus.RETRY] }, nextAttemptAt: { lte: new Date() } },
+    where: { ...activation, id, status: { in: [OutboxStatus.PENDING, OutboxStatus.RETRY] }, nextAttemptAt: { lte: new Date() } },
     // Bring pre-policy rows' recorded recipient into alignment before transmission.
     data: { status: OutboxStatus.SENDING, recipientHash: tokenHash(recipient) },
   });
@@ -127,9 +140,10 @@ export async function deliverOutboxMessage(id: string): Promise<'sent' | 'retry'
 }
 
 export async function deliverDueOutbox(limit = 2): Promise<{ sent: number; retry: number; failed: number }> {
+  const activation = approvedActivationWindow();
   const leaseFailures = await failExpiredSendingLeases();
   const boundedLimit = Number.isFinite(limit) ? Math.min(10, Math.max(1, Math.floor(limit))) : 2;
-  const due = await db.emailOutbox.findMany({ where: { status: { in: [OutboxStatus.PENDING, OutboxStatus.RETRY] }, nextAttemptAt: { lte: new Date() } }, orderBy: { createdAt: 'asc' }, take: boundedLimit, select: { id: true } });
+  const due = await db.emailOutbox.findMany({ where: { ...activation, status: { in: [OutboxStatus.PENDING, OutboxStatus.RETRY] }, nextAttemptAt: { lte: new Date() } }, orderBy: { createdAt: 'asc' }, take: boundedLimit, select: { id: true } });
   const totals = { sent: 0, retry: 0, failed: leaseFailures };
   // Sequential processing deliberately bounds outbound provider calls in a worker pass.
   for (const row of due) {

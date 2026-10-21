@@ -1,4 +1,5 @@
 import { SecurityConfigurationError } from '@/lib/auth/crypto';
+import { hasVerifiedLaunchEvidence } from './launch-evidence';
 
 export const HOSTINGER_MAIL_API_BASE = 'https://api.mail.hostinger.com';
 export const HOSTINGER_MAILBOX_ID = 'ACa3656503d597985bc359324043d7';
@@ -91,6 +92,7 @@ export function productionIntakeBlockers(env: Environment = process.env): string
   if (!env.DATABASE_URL) blockers.push('Database runtime is not configured.');
   if (!validAppOrigin(env.APP_ORIGIN)) blockers.push('The HTTPS application origin is not configured.');
   if (!enabled(env.HOSTINGER_RUNTIME_CONFIGURED)) blockers.push('The Hostinger application runtime is not configured.');
+  if (!hasVerifiedLaunchEvidence(env)) blockers.push('Protected owner-policy and actual off-host restore evidence is not recorded.');
   return blockers;
 }
 

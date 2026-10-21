@@ -12,6 +12,7 @@ import { ScenariosWorkspace } from "./ScenariosWorkspace";
 import { NarrativeWorkspace } from "./NarrativeWorkspace";
 import { NotesTasksWorkspace } from "./NotesTasksWorkspace";
 import { AnnualReviewWorkspace } from "./AnnualReviewWorkspace";
+import { RetentionWorkspace } from "./RetentionWorkspace";
 import { ClientOpportunityBadges } from "./ClientOpportunityBadges";
 import type { ClientDetailResponse, JsonRecord } from "./types";
 
@@ -30,7 +31,7 @@ export function ClientDetailWorkspace({ clientId }: { clientId: string }) {
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [activeTab, setActiveTab] = useState<"profile" | "analysis" | "reports" | "recommendations" | "scenarios" | "narrative" | "notes" | "review">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "analysis" | "reports" | "recommendations" | "scenarios" | "narrative" | "notes" | "review" | "retention">("profile");
 
   async function load() {
     setLoading(true); setError("");
@@ -93,6 +94,7 @@ export function ClientDetailWorkspace({ clientId }: { clientId: string }) {
       <button className={activeTab === "narrative" ? "active" : ""} type="button" role="tab" aria-selected={activeTab === "narrative"} onClick={() => setActiveTab("narrative")}>Narrative</button>
       <button className={activeTab === "notes" ? "active" : ""} type="button" role="tab" aria-selected={activeTab === "notes"} onClick={() => setActiveTab("notes")}>Notes & tasks</button>
       <button className={activeTab === "review" ? "active" : ""} type="button" role="tab" aria-selected={activeTab === "review"} onClick={() => setActiveTab("review")}>Annual review</button>
+      <button className={activeTab === "retention" ? "active" : ""} type="button" role="tab" aria-selected={activeTab === "retention"} onClick={() => setActiveTab("retention")}>Retention</button>
     </div>
     <ClientOpportunityBadges clientId={clientId} key={record.revision} />
     {activeTab === "profile" && <>
@@ -108,5 +110,6 @@ export function ClientDetailWorkspace({ clientId }: { clientId: string }) {
     {activeTab === "narrative" && <NarrativeWorkspace clientId={clientId} />}
     {activeTab === "notes" && <NotesTasksWorkspace clientId={clientId} />}
     {activeTab === "review" && <AnnualReviewWorkspace clientId={clientId} onChanged={() => void load()} />}
+    {activeTab === "retention" && <RetentionWorkspace clientId={clientId} />}
   </section>;
 }
