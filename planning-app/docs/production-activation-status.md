@@ -1,21 +1,27 @@
 # Production activation status — October 21, 2026
 
-All portal email is now restricted in server code to **brokerjesse247@gmail.com**, including client confirmations, advisor alerts, resume/password-reset links, annual notices and previously queued recipient payloads. Advisor login is unchanged. No email was sent and no old outbox queue was released.
+## Mail setup verified
 
-The provider request now uses the officially documented recipient array. Only HTTP 204 counts as a successful send. Permanent configuration/4xx errors and uncertain/non-204 acceptance are held for correction or manual review; transient responses use bounded retry delays. Messages are sent sequentially, with a default batch of two and a maximum of ten.
+Jesse created a new Hostinger Mail API token and submitted it through protected input. Metadata verification passed for the authorized LSRT mailbox on the development environment and again from the actual non-root Hostinger service. The verified sender is **jesse@lsrtinsurance.com**. No inbox messages were read and no token or message content was printed.
 
-Production readiness now depends on a real read-only database/replay-constraint probe, verified scheduler/signing, verified encrypted off-host recovery, mailbox/sender verification and explicit dispatch/intake/retention/compliance gates. It is not hard-coded to false, and approval flags alone cannot prove replay-storage health. Real intake also remains closed without verified off-host recovery.
+The original metadata-check URL returned HTTP 404. The application and regression test now use the official SDK’s **GET /api/v1/me** authenticated-account metadata endpoint, with redirects prohibited. This correction does not change the mailbox-scoped send endpoint. Source: https://raw.githubusercontent.com/hostinger/mail-api-typescript-sdk/main/docs/AccountApi.md .
 
-**Verified locally:** TypeScript passed, all 250 tests across 49 files passed, and the actual development replay-schema probe succeeded, and the final Next.js production build passed. Those checks are not Hostinger production verification.
+The VPS stores the Mail API token as a root-owned encrypted systemd credential. It is not in application source, GitHub or a plaintext runtime file. The hardened, non-root app loads the credential through its private systemd credential directory. The isolated Hostinger production build passed and the restarted login page returned HTTP 200. The service still listens only on **127.0.0.1:3117**; anonymous client-data access returned HTTP 401. The signed queue timer remains active.
 
-**Verified at Hostinger:** Direct account access works; the existing KVM 2 is running Ubuntu 24.04. Two existing backups dated October 8 and October 15 were listed, with a weekly backup schedule. No backup was created/restored, no paid upgrade was purchased, and no keys, existing applications or DNS/homepage files were changed.
+## Delivery is still held
 
-## Remaining blockers
+All portal-generated email is restricted by application code to **brokerjesse247@gmail.com**, including old recipient payloads, alerts, confirmations, resume/reset links and annual notices. The verified metadata request is not proof of email delivery. No test message was sent, no pending queue was released, and `OPERATIONS_OUTBOX_DISPATCH_APPROVED` remains disabled. Sender attestation and Jesse’s approval of one exact owner-only test message remain required before testing delivery.
 
-1. SSH access was approved by Jesse at 09:18 and is working. The new task key was added while retaining the existing key. Inspection confirmed existing Node 22, pnpm, MySQL 8, nginx and other application services. Separate service/private-cache/configuration directories, a separate planning database, a DML-only application identity, separate scoped migration/recovery identities and fresh production encryption/signing keys are prepared. The locked application build passed on Hostinger, the non-root Chromium PDF check passed, and the isolated systemd app/signed queue timer are active. A real encrypted restore drill restored all 31 schema tables into the separate test database, with zero client records in either database. No public routing or existing service was changed. Only this task’s key is removed when pausing for the remaining credential; existing access is preserved.
-2. Supply or securely reuse a valid LSRT Mail API credential. The integration is connected, but the token is currently unusable/empty in the execution environment. Sender identity and a test message to Jesse still require verification before dispatch.
-3. On the actual Hostinger runtime, configure private database/storage, HTTPS, Chromium, encrypted off-host backup and an isolated restore drill, durable signed scheduling, key custody and the owner-approved retention/legal-hold/compliance policy. Keep real intake closed until verified.
+Provider transmission uses the documented recipient array. Only HTTP 204 counts as provider acceptance; permanent errors and uncertain acceptance remain held. Sending is sequential, default batch two and maximum ten. Previously queued development emails are not imported into production.
 
-A production activation request is not proof that safeguards exist. Live delivery and real-client intake remain held until these blockers are resolved. The existing blue website is unchanged.
+## Public launch is still separate
 
-Temporary access cleanup: only the retireplan-activation-20261021 key was removed before pausing for the missing mail credential. Pre-existing authorized-key lines and all existing application services were preserved. No broad Hostinger key-removal operation was used.
+The existing blue retirementexpert.si homepage, DNS, public nginx routing, other applications and existing SSH keys are unchanged. The planning portal is not publicly activated at plan.retirementexpert.si. No purchase, reset or server reinstall occurred. The isolated production database has not been populated with Preview advisors or client data.
+
+The existing encrypted local restore drill, native Chromium check and signed scheduler check do not prove off-host recovery. Real-client intake stays blocked pending private off-host backup/key recovery, owner-approved retention/legal holds and compliance, public HTTPS routing, production advisor provisioning and a verified real-client run.
+
+## Latest verification
+
+TypeScript passed. Seventeen focused mail, metadata/privacy and production-hold tests passed across four files. The isolated Hostinger rebuild and credential-loaded metadata check passed separately. Broader implementation evidence is preserved in the existing project documents; these checks are not a claim of public launch or inbox delivery.
+
+Temporary access cleanup passed: exactly one retireplan-activation-20261021 key was removed from the server’s authorized keys after setup. Five pre-existing authorized-key lines were preserved. Existing SSH access and all unrelated services were left intact.

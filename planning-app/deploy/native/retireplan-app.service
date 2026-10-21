@@ -10,7 +10,8 @@ Group=retireplan
 WorkingDirectory=/opt/retireplan/current
 EnvironmentFile=/etc/retireplan/runtime.env
 Environment=HOME=/var/lib/retireplan
-ExecStart=/usr/bin/node /opt/retireplan/current/node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port 3117
+LoadCredentialEncrypted=hostinger-mail-api:/etc/credstore.encrypted/retireplan-mail-token
+ExecStart=/usr/bin/bash /opt/retireplan/current/deploy/native/start-app.sh
 Restart=on-failure
 RestartSec=5
 UMask=0077

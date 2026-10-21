@@ -38,7 +38,7 @@ describe('operations status', () => {
   });
 
   it('records safe verified and forbidden metadata evidence without returning mailbox data', async () => {
-    expect(HOSTINGER_METADATA_URL).toBe('https://api.mail.hostinger.com/api/v1/mailboxes');
+    expect(HOSTINGER_METADATA_URL).toBe('https://api.mail.hostinger.com/api/v1/me');
     const verified = await verifyHostingerMailMetadata({
       env: { HOSTINGER_MAIL_API_TOKEN: 'token' },
       now: new Date('2026-10-20T00:00:00.000Z'),

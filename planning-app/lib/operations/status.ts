@@ -2,7 +2,8 @@ import { SecurityConfigurationError } from '@/lib/auth/crypto';
 
 export const HOSTINGER_MAIL_API_BASE = 'https://api.mail.hostinger.com';
 export const HOSTINGER_MAILBOX_ID = 'ACa3656503d597985bc359324043d7';
-export const HOSTINGER_METADATA_URL = `${HOSTINGER_MAIL_API_BASE}/api/v1/mailboxes`;
+// Official AccountApi.getCurrentAccount: account and allowed-mailbox metadata only.
+export const HOSTINGER_METADATA_URL = `${HOSTINGER_MAIL_API_BASE}/api/v1/me`;
 const METADATA_TIMEOUT_MS = 10_000;
 
 type Environment = Record<string, string | undefined>;
@@ -160,6 +161,7 @@ export async function verifyHostingerMailMetadata(args: {
     const response = await (args.fetcher ?? fetch)(HOSTINGER_METADATA_URL, {
       method: 'GET',
       headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+      redirect: 'error',
       signal: controller.signal,
     });
     if (response.status !== 200) return metadataResult(response.status, checkedAt);

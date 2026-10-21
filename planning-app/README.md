@@ -20,9 +20,9 @@ Analysis snapshots are revision-aware and uniquely cached. Report snapshots pres
 
 ## Email and operational holds
 
-Transactional alerts, confirmations, resume links and resets use an encrypted durable EmailOutbox. Dispatch requires the authorized LSRT `HOSTINGER_MAIL_API_TOKEN`, verified sender and explicit `OPERATIONS_OUTBOX_DISPATCH_APPROVED=true`. Mailbox metadata verification uses `GET /api/v1/mailboxes`; no inbox or marketing access is permitted. Only HTTP 204 becomes SENT. Ambiguous acceptance is held for manual review rather than blindly retried. `pnpm email:worker` honors the same approval hold as the signed production dispatcher. Queued is not delivered.
+Transactional alerts, confirmations, resume links and resets use an encrypted durable EmailOutbox. Dispatch requires the authorized LSRT `HOSTINGER_MAIL_API_TOKEN`, verified sender and explicit `OPERATIONS_OUTBOX_DISPATCH_APPROVED=true`. Mailbox metadata verification uses the official AccountApi endpoint `GET /api/v1/me`; no inbox or marketing access is permitted. Only HTTP 204 becomes SENT. Ambiguous acceptance is held for manual review rather than blindly retried. `pnpm email:worker` honors the same approval hold as the signed production dispatcher. Queued is not delivered.
 
-The signed dispatcher uses a database-backed atomic replay nonce and generates due private PDFs separately from email. A supported production scheduler must be configured; sandbox timers are not production operations. The mail token is currently unavailable and actual delivery is not verified. See `docs/production-operations.md` and `docs/hostinger-setup-status.md`.
+The signed dispatcher uses a database-backed atomic replay nonce and generates due private PDFs separately from email. The isolated Hostinger native scheduler is configured; sandbox timers are not production operations. Jesse submitted the new protected mail token and authorized-mailbox metadata verification passed on October 21. Actual email delivery remains unverified and held until the exact owner-only test message is approved. See `docs/production-operations.md` and `docs/hostinger-setup-status.md`.
 
 ## Production protections and deployment
 

@@ -16,7 +16,7 @@ The daily encrypted backup timer is installed but remains disabled pending reten
 
 - Public `plan.retirementexpert.si` HTTPS routing and homepage links. No DNS/nginx/public cutover was made.
 - A production advisor/account or client-data migration. The database setup is not a claim that the Preview login/data is already copied to production.
-- Verified LSRT Mail API credentials, sender attestation, actual test-message delivery or live outbox release. Every portal email destination remains brokerjesse247@gmail.com.
+- The new LSRT Mail API credential is installed as an encrypted systemd credential and metadata verified from the actual non-root Hostinger app for jesse@lsrtinsurance.com. Sender attestation, an explicitly approved test message and live outbox release remain pending. No email has been sent. Every portal email destination remains brokerjesse247@gmail.com.
 - Approved off-host backups, key recovery, retention/legal holds and real-client compliance policy. Real intake remains closed.
 
 These are verified native prerequisites, not a public production launch. Only this task-specific SSH key is removed when pausing or finishing server work; existing access remains intact.
