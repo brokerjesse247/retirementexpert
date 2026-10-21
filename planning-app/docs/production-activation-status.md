@@ -4,13 +4,15 @@
 
 The actual Hostinger application's Node mail helper submitted one controlled owner-only test at **20:42:01 UTC**. Hostinger accepted it with exactly **HTTP 204**. Sender: **jesse@lsrtinsurance.com**. Recipient: **brokerjesse247@gmail.com**. The test contained no client information. No inbox messages were read.
 
-The earlier Python request returned HTTP 403; that did not establish a failure of the application's Node transport. The corrected test used the existing authorized token and documented mailbox-scoped endpoint. No token was regenerated, recipient policy broadened or provider restriction bypassed. A narrow outbound-metadata query had no indexed log entry at the time; HTTP 204 proves provider acceptance, not placement in Gmail's Inbox rather than Spam.
+The earlier Python request returned HTTP 403; that did not establish a failure of the application's Node transport. The corrected test used the existing authorized token and documented mailbox-scoped endpoint. No token was regenerated, recipient policy broadened or provider restriction bypassed. A narrow outbound-metadata query had no indexed log entry at the time; HTTP 204 alone proves provider acceptance, not Gmail folder placement. At **21:11 UTC**, Jesse confirmed receipt and supplied a Gmail Inbox screenshot showing the approved connection test. Receipt of that single test is now confirmed by the owner; automatic portal sending and report sending are still not activated.
 
 Metadata verification uses the official SDK's **GET /api/v1/me** endpoint. The mailbox-scoped send request uses the documented recipient array. Source: https://raw.githubusercontent.com/hostinger/mail-api-typescript-sdk/main/docs/AccountApi.md and https://raw.githubusercontent.com/hostinger/mail-api-typescript-sdk/main/docs/V1SendRequest.md . The token remains in an encrypted systemd credential and is not printed, committed or bundled with backups.
 
 ## General dispatch and real collection remain held
 
 Jesse has a pending approval card for **docs/proposed-launch-policy.md**. It asks for the actual private Google Drive backup destination, separate protected recovery kit, six-year minimum records policy/legal holds, and whether to copy the single submitted Preview record. Silence is not approval.
+
+At **21:13 UTC**, Jesse specified **brokerjesse247@gmail.com** for every Google Drive folder created for this project. The proposed policy now requires that owner and forbids another-account fallback. A metadata-only Drive identity check at 21:14 UTC returned a different account, so no folders were created, no files were uploaded and no existing Drive files were moved. Connect the required account and verify its identity before any Drive write. This destination instruction does not approve the remaining retention/recovery policy, Preview import, intake activation or outbox release, and it does not change the existing advisor login.
 
 Owner-only routing remains hard-coded to brokerjesse247@gmail.com. A production activation timestamp now excludes all pre-activation queued messages from both scheduled and direct claims. Unknown acceptance and stale send leases are not automatically repeated. The new source prohibits provider redirects, preserves sequential two-message default batches and does not automatically send reports.
 

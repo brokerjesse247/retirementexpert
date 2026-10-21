@@ -52,6 +52,13 @@ Jesse's password-only advisor access, strict required-question step gates and bl
 Detailed original clauses are preserved below by section; these are source requirements, not claims of completion.
 
 
+## October 21 required Google Drive owner
+
+- [x] Record Jesse’s explicit destination correction: every Google Drive folder created for this project must be owned by brokerjesse247@gmail.com, with no different-account fallback. The launch policy is updated; the advisor login is unchanged.
+- [ ] Connect and verify that Drive account before creating folders or uploading backups. The metadata-only identity check at 21:14 UTC returned a different account; no Drive folders/files were created, uploaded or moved. This account instruction is not approval of the remaining launch policy or Preview migration.
+
+Jesse confirmed receipt of the approved connection-test email and supplied a Gmail Inbox screenshot at 21:11 UTC. This is one confirmed test, not approval to release the outbox or send client reports.
+
 ## Original specification — 1. How to use this document with Manus
 
 Give Manus this entire PDF, then paste the

@@ -156,3 +156,7 @@ Jesse's owner name/email and existing verified password hash are provisioned wit
 ## October 21 real-intake completion boundary
 
 Resolve actual owner-only mail transport and implement retention/recovery controls now. A corrected native Node test returned204; generic dispatch and collection stay held. Require explicit approval of the proposed policy/private Drive receiver/key custody and any unclassified Preview import. A protected root-owned evidence record must bind the actual owner decision, policy hash, accepted owner mail and real off-host database/application restore before enabling intake. No fabricated attestation or booleans-only launch. Preserve existing public login, blue homepage and unrelated VPS apps.
+
+## October 21 Google Drive destination correction
+
+All Google Drive folders created for this project must be owned by brokerjesse247@gmail.com, per Jesse’s explicit instruction. Before any folder creation or upload, verify the authenticated Drive identity against that exact account; stop on a mismatch and never use another account as a fallback. The current Drive identity check does not match, so correct-account authorization remains necessary. This does not change the advisor login, approve the remaining recovery/retention policy, authorize Preview migration or activate intake/email. The owner has separately confirmed that the one approved test email arrived in Gmail.
