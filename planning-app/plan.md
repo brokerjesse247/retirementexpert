@@ -146,3 +146,9 @@ Jesse requests production email/data-protection activation, with all outgoing po
 ## October 21 at 09:18 approved VPS access
 
 Jesse approved the exact task-specific SSH key. The existing VPS already has Node 22, MySQL 8 and nginx/PM2 applications. Reuse those native prerequisites without Docker installation or replacing services. Prepare a separate non-root runtime and DML-only planning database; keep the staged application loopback-only on port 3117. All intake/mail/compliance/backup attestations remain false until their actual checks complete. No public routing, DNS or homepage deployment is included in this access approval.
+
+## October 21 at 13:15 — authorized public advisor connection
+
+Jesse explicitly authorized connecting retirementexpert.si to the planning portal. The earlier no-DNS/no-homepage-cutover limits now permit only this scoped connection: a plan A record to the existing KVM 2, its own nginx HTTPS host to the loopback application, and direct advisor links plus truthful availability text in the existing homepage index. Root/www/ftp records, other host configurations, blue styling, SVGs and asset references remain unchanged. Native Hostinger routing and the provider's single-file upload API are used; no Manus publication, purchase, reinstall, broad website import or GitHub main deployment occurs.
+
+Jesse's owner name/email and existing verified password hash are provisioned without changing the password, importing clients, copying documents or releasing old queues. Public intake is runtime-gated before rendering the questionnaire. Real intake, compliance/retention/off-host backup approvals and outgoing delivery remain closed; the recorded Mail API 403 is not bypassed or retried. Code and minimally updated homepage source stay in retirementexpert/platform. Temporary task-specific server access is removed after verification. Current operational evidence and sign-in instructions are in docs/public-access-status.md.

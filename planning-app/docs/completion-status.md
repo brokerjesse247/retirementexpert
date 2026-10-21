@@ -1,6 +1,6 @@
 # RetirementExpert completion status
 
-Updated October 21, 2026. The existing blue retirementexpert.si website is preserved. The planning app is in development Preview; no production publication, DNS change or homepage alteration was performed.
+Updated October 21, 2026. Public advisor access is now connected at https://plan.retirementexpert.si/login. The regular retirementexpert.si website links directly to it and preserves its blue styling and graphics. Only the planning DNS record, isolated HTTPS host and minimal homepage links/status text changed. Real-client intake and outgoing mail are not activated. No Manus publication was requested.
 
 ## Connected advisor features
 
@@ -18,7 +18,7 @@ Advisor Settings includes branding, disclosures, annual/planning assumptions, sa
 
 ## How to try it
 
-In Manus **Preview**, sign in, select **Clients** and open a successfully submitted fictional client. Use the Recommendations, Scenarios, Notes & tasks, Narrative, Reports and Annual review tabs. Review and approve actions and narrative before generating an enriched report. See `docs/advisor-feature-help.md` for the detailed flow. Do not submit real financial or health information before production launch protections are approved.
+Public sign-in is available at https://plan.retirementexpert.si/login using agentjesse247@gmail.com and the same existing advisor password. No authenticator is required. The public database starts without clients: Preview clients, documents and queued email were not imported. While real-client safeguards remain unapproved, continue fictional questionnaire/report testing in Manus **Preview**. Select **Clients**, open a submitted fictional client and use the advisor tabs. Review and approve actions and narrative before generating an enriched report. See `docs/advisor-feature-help.md` for the detailed flow. Public /intake clearly shows collection closed; do not submit real financial or health information yet.
 
 ## Evidence
 
@@ -26,9 +26,9 @@ The dedicated test database exercises twenty-eight real protected API checks thr
 
 ## Still needed for production
 
-The existing Hostinger KVM 2 is the intended later application host. Its services must be inspected safely before installing/deploying the isolated portal. Production database, Chromium, private storage, HTTPS, encrypted off-host backups with a restore drill, scheduler, verified LSRT mail sending and retention/compliance approval still need activation. Do not reset/reinstall the VPS or disturb existing services.
+The isolated application, planning database, non-root Chromium, signed queue timer, private encrypted storage, local restore drill and public HTTPS now run on the existing Hostinger KVM 2, with unrelated services preserved. Real-client activation still needs approved encrypted off-host backup/key recovery, retention/legal holds, compliance and a real-client verification. The approved one-message Mail API test returned HTTP 403; no delivery was confirmed and outgoing dispatch remains held. Do not reset/reinstall the VPS, disturb existing services or bypass the provider rejection.
 
-After those checks, the approved planning subdomain and homepage links can be connected in an explicitly authorized launch step. Production intake remains fail-closed until its security/compliance gates are approved. This development completion does not authorize a purchase, DNS cutover, actual reminder delivery or emailing client reports.
+The approved planning subdomain and homepage links are now connected. Public advisor access does not remove intake, compliance, backup or email holds. The connection passed the Hostinger route build, 25 focused regressions, ten public endpoint checks and a read-only boundary review. Detailed current login and connection evidence is in `docs/public-access-status.md`.
 
 ## Source boundary
 

@@ -2,25 +2,18 @@
 
 ## Verified on the existing KVM 2
 
-Jesse approved the task-specific SSH key. It was added without replacing the existing key. Existing applications, PM2, nginx, PHP, database services, DNS and homepage files were preserved.
+The isolated RetirementExpert application uses its own pinned pnpm 10.18.0, locked dependencies, separate planning database and non-root retireplan service. All additive migrations and the actual Hostinger production build passed. The existing server was not reset or reinstalled, and unrelated applications, PM2, PHP, database services and nginx hosts were preserved.
 
-The isolated RetirementExpert release installed its own pinned pnpm 10.18.0 and locked dependencies, applied all additive migrations to its separate database, and passed the actual Hostinger production build. The new database has 31 schema tables; no Preview clients, old queued emails or other applications’ data were imported.
+The application listener remains **127.0.0.1:3117 only**. The newly authorized public host **https://plan.retirementexpert.si** proxies to that listener through its own nginx configuration and TLS certificate. Root/www/ftp DNS are unchanged. The current retirementexpert.si homepage offers direct Advisor log in links and preserves the existing blue styles and graphics. Source files are root-owned with service-group read access; private state/cache paths are writable only where required. Runtime encryption and signing keys were never printed or committed.
 
-The native Next.js service is running as non-root user `retireplan`, with a separate DML-only database identity. Its listener is **127.0.0.1:3117 only**. Login returned HTTP 200; unauthenticated client-data access returned HTTP 401; production intake remained blocked with HTTP 503. Source files are root-owned with service-group read access; private state/cache paths are writable only where required. Runtime encryption and signing keys were generated on the VPS and never printed or committed.
+Jesse’s public advisor account was provisioned with only the existing verified password hash, name and email. The password is unchanged. Preview clients, documents, sessions and old queued emails were not copied; the public database has zero clients. Login is available at **https://plan.retirementexpert.si/login** using **agentjesse247@gmail.com**. Anonymous client APIs remain protected. Public intake now clearly shows collection closed rather than displaying an unusable form; its server writes remain blocked.
 
-Chromium installed in the isolated service cache and generated a valid synthetic Letter PDF as the non-root runtime user. The systemd queue service completed a real signed request successfully, and its durable timer is active. Outgoing email remains held at the backend; this queue verification did not send an email or generate a client report.
+Chromium generated a valid synthetic Letter PDF as the non-root runtime user. The systemd queue service completed a signed request successfully and its durable timer is active, but outbound dispatch remains held. The Mail API token is an encrypted systemd credential and metadata was verified for the authorized LSRT mailbox. The approved send test returned HTTP 403; no delivery was confirmed and no automatic resend or queue release occurred.
 
-The daily encrypted backup timer is installed but remains disabled pending retention, key-custody and private off-host destination approval. A real AES-256-GCM backup was authenticated and restored into the separate test database: all 31 schema tables matched, with zero clients in source and target. Application encryption round-tripped successfully. The tested-at timestamp was recorded, but backup approval/off-host/compliance flags were not inferred or enabled. This does not prove off-host recovery.
+The daily encrypted backup timer is installed but disabled pending retention, key-custody and private off-host destination approval. A real AES-256-GCM backup authenticated and restored into a separate test database; all 31 schema tables matched with zero clients in source and target at the time of that drill. Encryption round-tripped successfully. This is not proof of off-host recovery, and approval flags were not inferred from the local test.
 
-## Not yet active
+## Remaining launch work
 
-- Public `plan.retirementexpert.si` HTTPS routing and homepage links. No DNS/nginx/public cutover was made.
-- A production advisor/account or client-data migration. The database setup is not a claim that the Preview login/data is already copied to production.
-- The new LSRT Mail API credential is installed as an encrypted systemd credential and metadata verified from the actual non-root Hostinger app for jesse@lsrtinsurance.com. Sender attestation, an explicitly approved test message and live outbox release remain pending. No email has been sent. Every portal email destination remains brokerjesse247@gmail.com.
-- Approved off-host backups, key recovery, retention/legal holds and real-client compliance policy. Real intake remains closed.
+Email delivery, encrypted off-host recovery, key custody, retention/legal holds, real-client compliance approval and a real-client launch verification are pending. Public advisor access does not remove these holds. All email destinations remain brokerjesse247@gmail.com. Optional AI-provider use is still disabled.
 
-These are verified native prerequisites, not a public production launch. Only this task-specific SSH key is removed when pausing or finishing server work; existing access remains intact.
-
-Local final verification: TypeScript passed and 250 tests across 49 files passed. Native Hostinger build/browser/scheduler/database checks are separate evidence.
-
-Temporary access cleanup: only the retireplan-activation-20261021 key was removed before pausing for the missing mail credential. Pre-existing authorized-key lines and all existing application services were preserved. No broad Hostinger key-removal operation was used.
+The connection passed the actual Hostinger route build, 25 focused regressions and ten public endpoint checks. The broader earlier native suite passed 250 tests across 49 files. Connection-specific evidence and login instructions are in docs/public-access-status.md. Temporary root access is scoped to this task and is removed after setup; no broad Hostinger key-removal operation is used.

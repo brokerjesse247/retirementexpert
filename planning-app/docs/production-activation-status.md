@@ -18,9 +18,9 @@ Provider transmission uses the documented recipient array. Only HTTP 204 counts 
 
 ## Public launch is still separate
 
-The existing blue retirementexpert.si homepage, DNS, public nginx routing, other applications and existing SSH keys are unchanged. The planning portal is not publicly activated at plan.retirementexpert.si. No purchase, reset or server reinstall occurred. The isolated production database has not been populated with Preview advisors or client data.
+Jesse authorized public access at 13:15 Pacific. The planning portal is now connected at https://plan.retirementexpert.si/login with its own nginx HTTPS host, and the regular retirementexpert.si homepage offers direct Advisor log in links. Existing blue graphics/styles and root/www/ftp DNS are unchanged; only the planning A record and minimal homepage link/status text were changed. No purchase, reset or server reinstall occurred. Only Jesse's owner name/email and existing password hash were provisioned; Preview clients, documents and queued messages were not imported.
 
-The existing encrypted local restore drill, native Chromium check and signed scheduler check do not prove off-host recovery. Real-client intake stays blocked pending private off-host backup/key recovery, owner-approved retention/legal holds and compliance, public HTTPS routing, production advisor provisioning and a verified real-client run.
+The existing encrypted local restore drill, native Chromium check and signed scheduler check do not prove off-host recovery. Real-client intake stays blocked pending private off-host backup/key recovery, owner-approved retention/legal holds and compliance, and a verified real-client run. Public /intake renders a clear collection-closed view without a questionnaire or autosave. The earlier Mail API 403 remains unresolved; public access did not release outgoing email.
 
 ## Latest verification
 
