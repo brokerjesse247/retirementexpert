@@ -10,7 +10,9 @@ The VPS stores the Mail API token as a root-owned encrypted systemd credential. 
 
 ## Delivery is still held
 
-All portal-generated email is restricted by application code to **brokerjesse247@gmail.com**, including old recipient payloads, alerts, confirmations, resume/reset links and annual notices. The verified metadata request is not proof of email delivery. No test message was sent, no pending queue was released, and `OPERATIONS_OUTBOX_DISPATCH_APPROVED` remains disabled. Sender attestation and Jesse’s approval of one exact owner-only test message remain required before testing delivery.
+All portal-generated email is restricted by application code to **brokerjesse247@gmail.com**, including old recipient payloads, alerts, confirmations, resume/reset links and annual notices. The verified metadata request is not proof of email delivery. Jesse approved one exact test at 12:04 Pacific; one send request was attempted at 19:04:59 UTC and Hostinger returned **HTTP 403**. The test is **not confirmed sent**; no automatic resend occurred. No pending queue was released, and `OPERATIONS_OUTBOX_DISPATCH_APPROVED` remains disabled.
+
+Read-only inspection found the RetirementExpert Portal token listed for the correct LSRT domain with All mailboxes scope. The outgoing allow/block page displayed no entries; the unsubmitted token form stated SMTP/IMAP and webhook access. No token was created, deleted or revealed, and no mail permission or recipient rule was changed. These facts do not identify which provider policy rejected the send. Further mailbox-setting inspection was blocked by connected-browser timeouts. Do not claim a specific missing permission without evidence, rotate tokens unnecessarily, or bypass a provider restriction through another send route.
 
 Provider transmission uses the documented recipient array. Only HTTP 204 counts as provider acceptance; permanent errors and uncertain acceptance remain held. Sending is sequential, default batch two and maximum ten. Previously queued development emails are not imported into production.
 
