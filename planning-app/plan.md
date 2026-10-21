@@ -142,3 +142,7 @@ Jesse approved remaining advisor feature implementation and confirmed `brokerjes
 ## October 21 production safeguard activation
 
 Jesse requests production email/data-protection activation, with all outgoing portal mail restricted to brokerjesse247@gmail.com. A separate root-access approval is required before adding this task-specific VPS key. Existing applications/keys, blue homepage and DNS are preserved. Technical readiness must be evidenced on the real Hostinger runtime; privacy/compliance/retention, backup recovery and live sender approval are not inferred from this implementation request.
+
+## October 21 at 09:18 approved VPS access
+
+Jesse approved the exact task-specific SSH key. The existing VPS already has Node 22, MySQL 8 and nginx/PM2 applications. Reuse those native prerequisites without Docker installation or replacing services. Prepare a separate non-root runtime and DML-only planning database; keep the staged application loopback-only on port 3117. All intake/mail/compliance/backup attestations remain false until their actual checks complete. No public routing, DNS or homepage deployment is included in this access approval.

@@ -6,13 +6,13 @@ The provider request now uses the officially documented recipient array. Only HT
 
 Production readiness now depends on a real read-only database/replay-constraint probe, verified scheduler/signing, verified encrypted off-host recovery, mailbox/sender verification and explicit dispatch/intake/retention/compliance gates. It is not hard-coded to false, and approval flags alone cannot prove replay-storage health. Real intake also remains closed without verified off-host recovery.
 
-**Verified locally:** TypeScript passed, all 248 tests across 48 files passed, and the actual development replay-schema probe succeeded, and the final Next.js production build passed. Those checks are not Hostinger production verification.
+**Verified locally:** TypeScript passed, all 250 tests across 49 files passed, and the actual development replay-schema probe succeeded, and the final Next.js production build passed. Those checks are not Hostinger production verification.
 
 **Verified at Hostinger:** Direct account access works; the existing KVM 2 is running Ubuntu 24.04. Two existing backups dated October 8 and October 15 were listed, with a weekly backup schedule. No backup was created/restored, no paid upgrade was purchased, and no keys, existing applications or DNS/homepage files were changed.
 
 ## Remaining blockers
 
-1. Approve the pending task-specific SSH-access card so the existing VPS services can be inspected and the approved safeguards configured safely. The key has been generated locally but has **not** been added to the server. Only this new key will be removed after setup; existing keys will be preserved.
+1. SSH access was approved by Jesse at 09:18 and is working. The new task key was added while retaining the existing key. Inspection confirmed existing Node 22, pnpm, MySQL 8, nginx and other application services. Separate service/private-cache/configuration directories, a separate planning database, a DML-only application identity, separate scoped migration/recovery identities and fresh production encryption/signing keys are prepared. The locked application build passed on Hostinger, the non-root Chromium PDF check passed, and the isolated systemd app/signed queue timer are active. A real encrypted restore drill restored all 31 schema tables into the separate test database, with zero client records in either database. No public routing or existing service was changed. Only this task’s key is removed when pausing for the remaining credential; existing access is preserved.
 2. Supply or securely reuse a valid LSRT Mail API credential. The integration is connected, but the token is currently unusable/empty in the execution environment. Sender identity and a test message to Jesse still require verification before dispatch.
 3. On the actual Hostinger runtime, configure private database/storage, HTTPS, Chromium, encrypted off-host backup and an isolated restore drill, durable signed scheduling, key custody and the owner-approved retention/legal-hold/compliance policy. Keep real intake closed until verified.
 

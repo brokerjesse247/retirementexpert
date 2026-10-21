@@ -1,0 +1,26 @@
+[Unit]
+Description=RetirementExpert isolated planning runtime
+After=network-online.target mysql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=retireplan
+Group=retireplan
+WorkingDirectory=/opt/retireplan/current
+EnvironmentFile=/etc/retireplan/runtime.env
+Environment=HOME=/var/lib/retireplan
+ExecStart=/usr/bin/node /opt/retireplan/current/node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port 3117
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/retireplan /var/cache/retireplan /opt/retireplan/current/.next/cache
+LimitNOFILE=65536
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

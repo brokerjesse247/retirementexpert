@@ -90,7 +90,8 @@ export async function createEncryptedBackup(env: Environment = process.env, now 
   const cipher = createCipheriv('aes-256-gcm', key, iv);
   const output = createWriteStream(temporaryFile, { mode: 0o600, flags: 'wx' });
   const command = env.MARIADB_DUMP_BIN || 'mariadb-dump';
-  const dump = spawn(command, ['--single-transaction', '--skip-comments', '--host', connection.host, '--port', connection.port, '--user', connection.user, connection.name], {
+  const compatibilityArgs = path.basename(command) === 'mysqldump' ? ['--no-tablespaces', '--set-gtid-purged=OFF'] : [];
+  const dump = spawn(command, ['--single-transaction', '--skip-comments', ...compatibilityArgs, '--host', connection.host, '--port', connection.port, '--user', connection.user, connection.name], {
     stdio: ['ignore', 'pipe', 'pipe'],
     env: { ...process.env, MYSQL_PWD: connection.password },
   });

@@ -1,0 +1,10 @@
+[Unit]
+Description=RetirementExpert daily encrypted backup schedule
+
+[Timer]
+OnCalendar=*-*-* 03:00:00 UTC
+Persistent=true
+Unit=retireplan-backup.service
+
+[Install]
+WantedBy=timers.target
