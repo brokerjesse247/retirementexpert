@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { errorResponse, noStore } from '@/lib/auth/http';
 import { requireAdvisor } from '@/lib/auth/session';
 import { collectOperationsStatus, type OutboxCounts } from '@/lib/operations/status';
+import { verifyDatabaseReplayStorage } from '@/lib/operations/replay-health';
 
 async function loadOutboxCounts(): Promise<OutboxCounts> {
   const groups = await db.emailOutbox.groupBy({
@@ -20,7 +21,7 @@ async function loadOutboxCounts(): Promise<OutboxCounts> {
 export async function GET(request: NextRequest) {
   try {
     await requireAdvisor(request);
-    const status = await collectOperationsStatus({ loadOutboxCounts });
+    const status = await collectOperationsStatus({ loadOutboxCounts, verifyReplayStorage: verifyDatabaseReplayStorage });
     return noStore(NextResponse.json({ status }));
   } catch (error) {
     return errorResponse(error);

@@ -16,7 +16,7 @@ Hostinger documents a Mail API token that is distinct from its hosting API token
 
 ## Advisor operations status and worker dispatch
 
-`GET /api/operations/status` requires an advisor session and returns only operational booleans, redacted provider status, timestamp evidence, and aggregate pending/failed outbox counts. It is deliberately always `operational: false` until external production gates have been checked by the operator.
+`GET /api/operations/status` requires an advisor session and returns only operational booleans, redacted provider status, timestamp evidence, and aggregate pending/failed outbox counts. It reports `operational: true` only in the production runtime when independent intake protections, metadata/sender verification, outbox access, scheduler signing and verified scheduling, a read-only fingerprint-primary-key replay probe, off-host backup recovery and explicit outbound-dispatch approval all pass. Missing evidence keeps it false.
 
 `POST /api/operations/dispatch` is intended for a Hostinger-supported application/job runtime, not a sandbox timer. A scheduler must sign `timestamp.nonce.POST./api/operations/dispatch` using `OPERATIONS_CRON_HMAC_SECRET` and send these headers:
 
@@ -39,7 +39,7 @@ The application invokes `assertProductionIntakeAllowed()` before production draf
 - `PRIVATE_STORAGE_VERIFIED=true`
 - valid 32-byte `DATA_ENCRYPTION_KEY`
 - `REPORT_DOWNLOAD_HMAC_CONFIGURED=true`
-- `BACKUP_RESTORE_APPROVED=true` and an ISO `BACKUP_RESTORE_TESTED_AT`
+- `BACKUP_RESTORE_APPROVED=true`, an ISO `BACKUP_RESTORE_TESTED_AT`, and verified `BACKUP_OFFHOST_VERIFIED=true`
 - `RETENTION_POLICY_APPROVED=true` and `LEGAL_HOLD_PROCESS_APPROVED=true`
 - `DATABASE_URL`, a canonical HTTPS `APP_ORIGIN`, and `HOSTINGER_RUNTIME_CONFIGURED=true`
 
@@ -63,3 +63,15 @@ The dispatcher imports the parent-owned `deliverDueReports(limit=2)` helper and 
 
 [1]: https://docs.hostinger.com/api-reference/email-sdks "Hostinger Mail API Email SDKs"
 [2]: https://api.mail.hostinger.com/ "Hostinger Mail API Reference"
+
+## October 21 owner-only delivery instruction
+
+Jesse directed that every portal email goes to brokerjesse247@gmail.com, including confirmations, resume links, password resets and annual notices. The server replaces recipients at enqueue and send, including legacy queued payloads. The advisor login address is unchanged. Client email input still identifies the client, but no message is sent to that address. Source instruction is independent of live dispatch approval; client messages and prior development queues must not be released automatically.
+
+The provider transport uses `to: ["brokerjesse247@gmail.com"]`, matching the current official typed `V1SendRequest` contract. The internal encrypted outbox keeps a single-recipient string. Only HTTP 204 is success. Permanent 4xx failures, configuration failures and ambiguous/non-204 acceptances require correction/manual review, not blind retries. Transient 429/5xx responses use bounded Retry-After/backoff; batches are sequential, default two, maximum ten. No verification message has been sent.
+
+Additional evidence switches `OPERATIONS_SCHEDULER_VERIFIED` and `BACKUP_OFFHOST_VERIFIED` remain false until a real Hostinger scheduler and an encrypted recovery copy outside the VPS are verified. A local restore drill or Hostinger weekly VPS snapshot alone does not satisfy those checks.
+
+Recovery must separately cover application/configuration, encrypted database/upload/PDF records, scheduler definitions and encryption-key custody. Keys must never be stored with the backup copy or committed to Git. The current database-only dump does not claim recovery of host files or server-level scheduled jobs.
+
+[3]: https://raw.githubusercontent.com/hostinger/mail-api-typescript-sdk/main/docs/V1SendRequest.md "Official Hostinger recipient-array request schema"

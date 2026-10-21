@@ -36,6 +36,15 @@ describe('backend security primitives', () => {
     expect(validPdfName('../statement.pdf')).toBe(false);
   });
 
+  it('does not transmit when the mandatory sender verification gate is absent', async () => {
+    process.env.HOSTINGER_MAIL_API_TOKEN = 'token';
+    process.env.HOSTINGER_MAIL_SENDER_VERIFIED = 'false';
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(sendHostinger({ to: 'advisor@example.test', displayName: 'LSRT Insurance', subject: 'Test', text: 'Text', html: '<p>Text</p>' })).rejects.toThrow('MAIL_CONFIGURATION');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('formula-protects CSV cells and only treats exactly 204 as delivered', async () => {
     expect(csvValue('=SUM(A1:A2)')).toBe("\"'=SUM(A1:A2)\"");
     process.env.HOSTINGER_MAIL_API_TOKEN = 'token';
@@ -44,6 +53,7 @@ describe('backend security primitives', () => {
     vi.stubGlobal('fetch', fetchMock);
     await expect(sendHostinger({ to: 'advisor@example.test', displayName: 'LSRT Insurance', subject: 'Test', text: 'Text', html: '<p>Text</p>' })).resolves.toBeUndefined();
     expect(fetchMock).toHaveBeenCalledWith('https://api.mail.hostinger.com/api/v1/mailboxes/ACa3656503d597985bc359324043d7/send', expect.objectContaining({ method: 'POST' }));
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).to).toEqual(['brokerjesse247@gmail.com']);
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 200 }));
     await expect(sendHostinger({ to: 'advisor@example.test', displayName: 'LSRT Insurance', subject: 'Test', text: 'Text', html: '<p>Text</p>' })).rejects.toThrow('MAIL_HTTP_200');
   });

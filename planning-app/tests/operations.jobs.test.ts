@@ -36,4 +36,13 @@ describe('operations dispatcher', () => {
     const deliverDueOutbox = async () => { throw new Error('email delivery must remain held'); };
     await expect(dispatchOperationsJobs({ env: {}, deliverDueReports, deliverDueOutbox })).resolves.toEqual({ reports: { processed: 2 }, outbox: { state: 'HELD' } });
   });
+
+  it('defaults to two messages and caps explicitly requested batches at ten', async () => {
+    const limits: number[] = [];
+    const env = { OPERATIONS_OUTBOX_DISPATCH_APPROVED: 'true', HOSTINGER_MAIL_API_TOKEN: 'test', HOSTINGER_MAIL_SENDER_VERIFIED: 'true' };
+    const deliverDueOutbox = async (limit: number) => { limits.push(limit); return { sent: 0, retry: 0, failed: 0 }; };
+    await dispatchOutboxIfApproved({ env, deliverDueOutbox });
+    await dispatchOutboxIfApproved({ env: { ...env, OPERATIONS_OUTBOX_LIMIT: '100' }, deliverDueOutbox });
+    expect(limits).toEqual([2, 10]);
+  });
 });

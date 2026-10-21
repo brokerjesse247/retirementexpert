@@ -138,3 +138,7 @@ Independent calculation units use shared immutable inputs and annual sourced ass
 ## October 21 advisor completion
 
 Jesse approved remaining advisor feature implementation and confirmed `brokerjesse247/retirementexpert` → `platform` as the source destination. Recommendations, independent scenarios, private notes/tasks, numeric-validated narrative review, report enrichment and explicit annual-review/update workflows are connected in development. Production activation, optional AI-provider approval, actual email dispatch, KVM 2 deployment and domain/homepage linkage remain separate launch work.
+
+## October 21 production safeguard activation
+
+Jesse requests production email/data-protection activation, with all outgoing portal mail restricted to brokerjesse247@gmail.com. A separate root-access approval is required before adding this task-specific VPS key. Existing applications/keys, blue homepage and DNS are preserved. Technical readiness must be evidenced on the real Hostinger runtime; privacy/compliance/retention, backup recovery and live sender approval are not inferred from this implementation request.

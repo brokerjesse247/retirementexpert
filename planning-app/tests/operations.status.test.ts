@@ -20,6 +20,7 @@ const approvedProduction = {
   REPORT_DOWNLOAD_HMAC_CONFIGURED: 'true',
   BACKUP_RESTORE_APPROVED: 'true',
   BACKUP_RESTORE_TESTED_AT: '2026-10-20T00:00:00.000Z',
+  BACKUP_OFFHOST_VERIFIED: 'true',
   RETENTION_POLICY_APPROVED: 'true',
   LEGAL_HOLD_PROCESS_APPROVED: 'true',
   DATABASE_URL: 'mysql://user:password@db.example.test/retireplan',
@@ -33,6 +34,7 @@ describe('operations status', () => {
     expect(() => assertProductionIntakeAllowed({ NODE_ENV: 'production' })).toThrow(SecurityConfigurationError);
     expect(() => assertProductionIntakeAllowed(approvedProduction)).not.toThrow();
     expect(inspectOperationsConfiguration(approvedProduction).intakeAllowed).toBe(true);
+    expect(() => assertProductionIntakeAllowed({ ...approvedProduction, BACKUP_OFFHOST_VERIFIED: 'false' })).toThrow(SecurityConfigurationError);
   });
 
   it('records safe verified and forbidden metadata evidence without returning mailbox data', async () => {
@@ -70,5 +72,20 @@ describe('operations status', () => {
     expect(status.outbox).toEqual({ pending: 4, failed: 2 });
     expect(JSON.stringify(status)).not.toContain('HOSTINGER_MAIL_API_TOKEN');
     expect(status.operational).toBe(false);
+  });
+
+  it('reports ready only with a verified database constraint, scheduler, off-host backup and mail gates', async () => {
+    const env = { ...approvedProduction, HOSTINGER_MAIL_API_TOKEN: 'test', HOSTINGER_MAIL_SENDER_VERIFIED: 'true', OPERATIONS_CRON_HMAC_SECRET: 'x'.repeat(32), OPERATIONS_OUTBOX_DISPATCH_APPROVED: 'true', OPERATIONS_SCHEDULER_VERIFIED: 'true', BACKUP_OFFHOST_VERIFIED: 'true' };
+    const args = { env, loadOutboxCounts: async () => ({ pending: 0, failed: 0 }), fetcher: async () => new Response(JSON.stringify({ data: [{ resourceId: HOSTINGER_MAILBOX_ID }] }), { status: 200 }) };
+    const held = await collectOperationsStatus(args);
+    expect(held.operational).toBe(false);
+    expect(held.configuration.cronReplayProtectionAvailable).toBe(false);
+    const ready = await collectOperationsStatus({ ...args, verifyReplayStorage: async () => true });
+    expect(ready.operational).toBe(true);
+    expect(ready.blockers).toEqual([]);
+    const failed = await collectOperationsStatus({ ...args, verifyReplayStorage: async () => { throw new Error('database unavailable'); } });
+    expect(failed.operational).toBe(false);
+    const noScheduler = await collectOperationsStatus({ ...args, env: { ...env, OPERATIONS_SCHEDULER_VERIFIED: 'false' }, verifyReplayStorage: async () => true });
+    expect(noScheduler.operational).toBe(false);
   });
 });

@@ -19,8 +19,8 @@ export function ForgotPasswordForm() {
     finally { setPending(false); }
   }
   return <AuthShell eyebrow="Account recovery" title="Reset your password">
-    {complete ? <><p className="notice">If an account matches that email address, reset instructions will arrive shortly.</p><p><Link className="button button-secondary" href="/login">Back to sign in</Link></p></> : <form onSubmit={submit} noValidate>
-      <p className="muted">Enter your email address and we’ll handle the rest securely.</p>
+    {complete ? <><p className="notice">Request recorded. If an account matches, reset instructions are queued for the owner’s designated inbox. This is not a delivery confirmation.</p><p><Link className="button button-secondary" href="/login">Back to sign in</Link></p></> : <form onSubmit={submit} noValidate>
+      <p className="muted">Enter your advisor login email. Portal email currently routes only to the owner’s designated inbox.</p>
       <label className="field"><span>Email address</span><input className="input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></label>
       {error && <p className="error" role="alert">{error}</p>}
       <button className="button button-primary" disabled={pending}>{pending ? "Submitting…" : "Send reset instructions"}</button>

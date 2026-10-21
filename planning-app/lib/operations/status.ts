@@ -36,7 +36,7 @@ export type OperationsConfiguration = {
 
 export type OperationsStatus = {
   checkedAt: string;
-  operational: false;
+  operational: boolean;
   configuration: OperationsConfiguration;
   provider: ProviderVerification;
   outbox: OutboxCounts;
@@ -84,6 +84,7 @@ export function productionIntakeBlockers(env: Environment = process.env): string
   if (!hasEncryptionKey(env.DATA_ENCRYPTION_KEY)) blockers.push('Encryption key is not configured.');
   if (!enabled(env.REPORT_DOWNLOAD_HMAC_CONFIGURED)) blockers.push('Private report download signing is not configured.');
   if (!enabled(env.BACKUP_RESTORE_APPROVED) || !validIsoDate(env.BACKUP_RESTORE_TESTED_AT)) blockers.push('A successful restore test is not recorded.');
+  if (!enabled(env.BACKUP_OFFHOST_VERIFIED)) blockers.push('Encrypted off-host backup recovery is not verified.');
   if (!enabled(env.RETENTION_POLICY_APPROVED)) blockers.push('The six-year retention policy is not approved.');
   if (!enabled(env.LEGAL_HOLD_PROCESS_APPROVED)) blockers.push('The legal-hold process is not approved.');
   if (!env.DATABASE_URL) blockers.push('Database runtime is not configured.');
@@ -98,7 +99,7 @@ export function assertProductionIntakeAllowed(env: Environment = process.env): v
   if (blockers.length) throw new SecurityConfigurationError('Production intake operations are not approved.');
 }
 
-export function inspectOperationsConfiguration(env: Environment = process.env): OperationsConfiguration {
+export function inspectOperationsConfiguration(env: Environment = process.env, replayStorageVerified = false): OperationsConfiguration {
   const blockers = productionIntakeBlockers(env);
   return {
     production: env.NODE_ENV === 'production',
@@ -115,8 +116,8 @@ export function inspectOperationsConfiguration(env: Environment = process.env): 
     runtimeConfigured: enabled(env.HOSTINGER_RUNTIME_CONFIGURED),
     mailTokenConfigured: Boolean(env.HOSTINGER_MAIL_API_TOKEN),
     senderAttested: enabled(env.HOSTINGER_MAIL_SENDER_VERIFIED),
-    // A schema-backed, atomic replay store is intentionally required in production.
-    cronReplayProtectionAvailable: env.NODE_ENV !== 'production',
+    // A read-only schema/database probe is evidence; an environment flag is not.
+    cronReplayProtectionAvailable: replayStorageVerified,
   };
 }
 
@@ -189,21 +190,29 @@ export async function collectOperationsStatus(args: {
   fetcher?: FetchLike;
   now?: Date;
   loadOutboxCounts: () => Promise<OutboxCounts>;
+  verifyReplayStorage?: () => Promise<boolean>;
 }): Promise<OperationsStatus> {
   const env = args.env ?? process.env;
   const checkedAt = (args.now ?? new Date()).toISOString();
-  const configuration = inspectOperationsConfiguration(env);
-  const [provider, outbox] = await Promise.all([
+  const [provider, outbox, replayVerified] = await Promise.all([
     verifyHostingerMailMetadata({ env, fetcher: args.fetcher, now: args.now }),
     args.loadOutboxCounts().catch((): OutboxCounts => ({ pending: null, failed: null })),
+    args.verifyReplayStorage?.().catch(() => false) ?? Promise.resolve(false),
   ]);
+  const configuration = inspectOperationsConfiguration(env, replayVerified);
   const blockers = productionIntakeBlockers(env);
+  if (!configuration.production) blockers.push('This is not the production application runtime.');
+  if (!configuration.cronReplayProtectionAvailable) blockers.push('Persistent scheduled-operation replay storage is not verified.');
+  if (!env.OPERATIONS_CRON_HMAC_SECRET || env.OPERATIONS_CRON_HMAC_SECRET.length < 32) blockers.push('Scheduler signing authentication is not configured.');
+  if (!enabled(env.OPERATIONS_SCHEDULER_VERIFIED)) blockers.push('The production scheduler is not verified.');
+  if (!enabled(env.BACKUP_OFFHOST_VERIFIED)) blockers.push('Encrypted off-host backup recovery is not verified.');
+  if (!enabled(env.OPERATIONS_OUTBOX_DISPATCH_APPROVED)) blockers.push('Outbound email dispatch remains on hold.');
   if (provider.state !== 'VERIFIED') blockers.push(`Hostinger metadata verification: ${provider.code}.`);
   if (!configuration.senderAttested) blockers.push('Hostinger sender verification attestation is not recorded.');
   if (outbox.pending === null || outbox.failed === null) blockers.push('Outbox database status is unavailable.');
   return {
     checkedAt,
-    operational: false,
+    operational: blockers.length === 0,
     configuration,
     provider,
     outbox,

@@ -65,11 +65,6 @@ export async function authorizeOperationsDispatch(args: {
   if (!accepted) throw new ApiError(409, 'Operations dispatcher request was already used.');
 }
 
-export function productionReplayStoreAvailable(env: Environment = process.env): boolean {
-  // No production implementation is allowed until the parent applies the required unique-key schema.
-  return env.NODE_ENV !== 'production';
-}
-
 export async function dispatchOutboxIfApproved(args: {
   env?: Environment;
   deliverDueOutbox: (limit: number) => Promise<{ sent: number; retry: number; failed: number }>;
@@ -79,8 +74,8 @@ export async function dispatchOutboxIfApproved(args: {
   if (!env.HOSTINGER_MAIL_API_TOKEN || env.HOSTINGER_MAIL_SENDER_VERIFIED !== 'true') {
     throw new ApiError(503, 'Outbound delivery provider is not verified.');
   }
-  const requested = Number(env.OPERATIONS_OUTBOX_LIMIT ?? '25');
-  const limit = Number.isInteger(requested) && requested > 0 ? Math.min(requested, 100) : 25;
+  const requested = Number(env.OPERATIONS_OUTBOX_LIMIT ?? '2');
+  const limit = Number.isInteger(requested) && requested > 0 ? Math.min(requested, 10) : 2;
   return args.deliverDueOutbox(limit);
 }
 
